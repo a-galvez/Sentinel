@@ -1,9 +1,9 @@
 # infra/docker-compose.yml
 version: '3.8'
 services:
-  db-habitforge:
+  db-sentinel:
     image: postgres:16-alpine
-    container_name: postgres-habitforge
+    container_name: postgres-sentinel
     env_file:
       - .env # Inyecta las variables exclusivas del contenedor
     ports:
