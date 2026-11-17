@@ -1,0 +1,120 @@
+name: CI
+
+# Se dispara en cada push a main y en cada Pull Request hacia main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Permisos mínimos: el pipeline solo lee el repositorio.
+permissions:
+  contents: read
+
+# Cancela ejecuciones anteriores del mismo commit/rama si se hace un push nuevo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Linter y formato (ESLint) + verificación de tipos y build de Vite
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Linter (ESLint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: ESLint
+        run: pnpm run lint
+        working-directory: frontend
+
+      - name: Verificación de tipos y build (tsc + vite)
+        run: pnpm run build
+        working-directory: frontend
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Pruebas automatizadas (xUnit backend + Vitest frontend)
+  # ---------------------------------------------------------------------------
+  test:
+    name: Pruebas (xUnit + Vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache de NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/dotnet-tools.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore backend
+        run: dotnet restore Sentinel.slnx
+        working-directory: backend
+
+      - name: Pruebas backend (xUnit)
+        run: dotnet test Sentinel.slnx --no-restore --verbosity normal
+        working-directory: backend
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Instalar dependencias frontend
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Pruebas frontend (Vitest)
+        run: pnpm run test
+        working-directory: frontend
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Build de imágenes Docker (solo si lint y test pasaron)
+  # ---------------------------------------------------------------------------
+  docker-build:
+    name: Build de imágenes Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API
+        run: docker build -t sentinel-api:${{ github.sha }} ./backend
+
+      - name: Build frontend
+        run: docker build -t sentinel-web:${{ github.sha }} ./frontend

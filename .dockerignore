@@ -1,0 +1,8 @@
+.github
+backend
+infra
+node_modules
+dist
+*.md
+.gitignore
+docker-compose.yml

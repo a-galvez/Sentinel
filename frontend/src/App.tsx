@@ -1,7 +1,4 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
 import './App.css'
 
 function App() {
@@ -11,14 +8,21 @@ function App() {
     <>
       <section id="center">
         <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+          <svg
+            className="shield"
+            viewBox="0 0 48 48"
+            role="img"
+            aria-label="Escudo Sentinel"
+          >
+            <path d="M24 2 4 10v14c0 11.6 8.5 19.7 20 22 11.5-2.3 20-10.4 20-22V10L24 2Z" />
+            <path className="shield-inner" d="M24 8 10 13.8v10.2c0 8.4 5.9 14.6 14 16.6 8.1-2 14-8.2 14-16.6V13.8L24 8Z" />
+            <path className="shield-check" d="m21.6 30.4-5.8-5.8 2.6-2.6 3.2 3.2 8-8 2.6 2.6-10.6 10.6Z" />
+          </svg>
         </div>
         <div>
-          <h1>Get started</h1>
+          <h1>Sentinel</h1>
           <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+            Plataforma de monitoreo y control. <code>CI</code> automatizado con GitHub Actions.
           </p>
         </div>
         <button
@@ -26,7 +30,7 @@ function App() {
           className="counter"
           onClick={() => setCount((count) => count + 1)}
         >
-          Count is {count}
+          Verificaciones: {count}
         </button>
       </section>
 
@@ -37,19 +41,23 @@ function App() {
           <svg className="icon" role="presentation" aria-hidden="true">
             <use href="/icons.svg#documentation-icon"></use>
           </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
+          <h2>Documentación</h2>
+          <p>Guías y referencia técnica</p>
           <ul>
             <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
+              <a href="https://github.com/" target="_blank">
+                <svg className="logo" role="presentation" aria-hidden="true">
+                  <use href="/icons.svg#github-icon"></use>
+                </svg>
+                Repositorio
               </a>
             </li>
             <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
+              <a href="https://docs.github.com/actions" target="_blank">
+                <svg className="button-icon" role="presentation" aria-hidden="true">
+                  <use href="/icons.svg#documentation-icon"></use>
+                </svg>
+                Guía de Actions
               </a>
             </li>
           </ul>
@@ -58,8 +66,8 @@ function App() {
           <svg className="icon" role="presentation" aria-hidden="true">
             <use href="/icons.svg#social-icon"></use>
           </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
+          <h2>Conectar</h2>
+          <p>Únete a la comunidad</p>
           <ul>
             <li>
               <a href="https://github.com/vitejs/vite" target="_blank">

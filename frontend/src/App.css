@@ -19,40 +19,26 @@
 
 .hero {
   position: relative;
+  display: flex;
+  justify-content: center;
 
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
+  .shield {
+    width: 148px;
+    height: 148px;
+    filter: drop-shadow(0 12px 24px rgba(15, 118, 110, 0.25));
   }
 
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
+  .shield path:first-child {
+    fill: var(--accent);
   }
 
-  .framework,
-  .vite {
-    position: absolute;
+  .shield .shield-inner {
+    fill: var(--bg);
+    opacity: 0.25;
   }
 
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
+  .shield .shield-check {
+    fill: var(--bg);
   }
 }
 
@@ -113,6 +99,7 @@
 
   .logo {
     height: 18px;
+    width: 18px;
   }
 
   a {
