@@ -1,0 +1,64 @@
+# =============================================================================
+# Sentinel · stack completo (Postgres + API + frontend)
+# Uso:  ./dev.sh up      (o: docker compose up -d --build)
+# Nota: el archivo infra/docker-compose.yml sigue existiendo para levantar
+#       SOLO la base de datos al desarrollar la API con `dotnet run`.
+# =============================================================================
+
+name: sentinel
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sentinel-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SuperSecretPassword123!}
+      POSTGRES_DB: ${POSTGRES_DB:-HabitForgeDB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - sentinel_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-HabitForgeDB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinel-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
+      # Dentro de la red del compose, el host de la base es el servicio "db".
+      ConnectionStrings__PostgresConnection: Host=db;Port=5432;Database=${POSTGRES_DB:-HabitForgeDB};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-SuperSecretPassword123!}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      JWT__Secret: ${JWT__Secret:-cambia-esto-por-una-clave-larga-y-secreta-de-al-menos-32-caracteres}
+      JWT__Issuer: ${JWT__Issuer:-sentinel}
+      JWT__Audience: ${JWT__Audience:-sentinel-web}
+      # En contenedor aplicamos migraciones al arrancar.
+      MIGRATE_ON_START: "true"
+    ports:
+      - "${API_PORT:-5186}:8080"
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sentinel-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-5173}:80"
+
+volumes:
+  sentinel_pgdata:
