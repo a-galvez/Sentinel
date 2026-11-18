@@ -27,7 +27,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
-        mb.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        // Si un módulo agrega configuraciones IEntityTypeConfiguration, reemplaza este
+        // bloque por: mb.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
         // Índices únicos del contrato (H1/H2/H3).
         mb.Entity<Usuario>().HasIndex(u => u.Correo).IsUnique();

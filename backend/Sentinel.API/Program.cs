@@ -31,6 +31,7 @@ var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? builder.Configuration["JW
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? builder.Configuration["JWT__Audience"] ?? "sentinel-web";
 
 builder.Services.AddOpenApi();
+builder.Services.AddControllers();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
