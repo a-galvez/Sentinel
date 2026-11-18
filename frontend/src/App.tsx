@@ -22,7 +22,7 @@ function App() {
         <div>
           <h1>Sentinel</h1>
           <p>
-            Plataforma de monitoreo y control. <code>CI</code> automatizado con GitHub Actions.
+            Plataforma de monitoreo y control. <code>CI</code> automatizado con GitHub Actions. Esta es una prueba
           </p>
         </div>
         <button
