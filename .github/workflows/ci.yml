@@ -80,6 +80,10 @@ jobs:
         run: dotnet restore Sentinel.slnx
         working-directory: backend
 
+      - name: Verificar formato (dotnet format)
+        run: dotnet format Sentinel.slnx --verify-no-changes --no-restore
+        working-directory: backend
+
       - name: Pruebas backend (xUnit)
         run: dotnet test Sentinel.slnx --no-restore --verbosity normal
         working-directory: backend

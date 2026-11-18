@@ -1,3 +1,3 @@
 namespace Sentinel.Domain.Common;
 
-public interface ITenantEntity { int EmpresaId { get; set; } }
+public interface ITenantEntity { Guid EmpresaId { get; set; } }

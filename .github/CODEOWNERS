@@ -1,0 +1,47 @@
+# CODEOWNERS — reemplazar @P1..@P5 por los usuarios de GitHub reales.
+# Formato: <patrón> <dueño>
+# Ver Docs/sentinel-backend-reparto.md §4 para el reparto de carpetas.
+
+# ----------------------------- Backend -----------------------------
+# P1 · Sesión y plataforma
+/backend/Sentinel.Application/Features/Auth/          @P1
+/backend/Sentinel.Application/Features/Usuarios/      @P1
+/backend/Sentinel.API/Controllers/Auth/              @P1
+/backend/Sentinel.API/Controllers/Usuarios/          @P1
+
+# P2 · Registro y alta de productos
+/backend/Sentinel.Application/Features/Registro/      @P2
+/backend/Sentinel.Application/Features/Productos/Crear/ @P2
+/backend/Sentinel.Application/Features/Catalogos/Categorias/ @P2
+/backend/Sentinel.API/Controllers/Registro/          @P2
+
+# P3 · Estado y productos
+/backend/Sentinel.Application/Features/Productos/     @P3
+/backend/Sentinel.Application/Features/Licencias/     @P3
+/backend/Sentinel.Domain/Calculos/                    @P3
+/backend/Sentinel.Domain/Enums/EstadoVencimiento.cs   @P3
+
+# P4 · Establecimientos y alertas
+/backend/Sentinel.Application/Features/Establecimientos/ @P4
+/backend/Sentinel.Application/Features/Alertas/       @P4
+/backend/Sentinel.Application/Features/Catalogos/TiposEstablecimiento/ @P4
+/backend/Sentinel.API/Controllers/Establecimientos/  @P4
+/backend/Sentinel.API/Controllers/Alertas/           @P4
+
+# P5 · Motor de requisitos
+/backend/Sentinel.Application/Features/Requisitos/    @P5
+/backend/Sentinel.Application/Features/Expediente/    @P5
+/backend/Sentinel.Application/Features/Dashboard/     @P5
+/backend/Sentinel.Infrastructure/Seeding/             @P5
+
+# --------------------- Archivos compartidos (P1) --------------------
+/backend/Sentinel.API/Program.cs                      @P1
+/backend/Sentinel.API/Modules/                        @P1
+/backend/Sentinel.Infrastructure/Persistence/AppDbContext.cs @P1
+/backend/Sentinel.Infrastructure/Migrations/          @P1
+/backend/Sentinel.Application/Abstractions/           @P1
+/backend/Sentinel.Application/Common/                 @P1
+/backend/Sentinel.API/Middleware/                     @P1
+/backend/Directory.Packages.props                     @P1
+/Docs/contratos-api-sentinel*.yaml                    @P1
+/.github/workflows/                                   @P1

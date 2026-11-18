@@ -1,11 +1,11 @@
-namespace Sentinel.Domain.Entities;
-
 using Sentinel.Domain.Common;
+
+namespace Sentinel.Domain.Entities;
 
 public class Producto : ITenantEntity, ISoftDelete
 {
-    public int ProductoId { get; set; }
-    public int EmpresaId { get; set; }
+    public Guid ProductoId { get; set; }
+    public Guid EmpresaId { get; set; }
     public int CategoriaProductoId { get; set; }
     public int? TipoDocumentoId { get; set; }
     public string Nombre { get; set; } = string.Empty;

@@ -1,6 +1,6 @@
 namespace Sentinel.Domain.Entities;
 
-public class ReglaAplicabilidad   
+public class ReglaAplicabilidad
 {
     public int ReglaAplicabilidadId { get; set; }
     public int TipoDocumentoId { get; set; }

@@ -3,11 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Sentinel.Application;
 
-public static class DependencyInjection {
-    public static IServiceCollection AddApplication(this IServiceCollection services) {
-        
+public static class DependencyInjection
+{
+    public static IServiceCollection AddApplication(this IServiceCollection services)
+    {
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
-        
         return services;
     }
 }
