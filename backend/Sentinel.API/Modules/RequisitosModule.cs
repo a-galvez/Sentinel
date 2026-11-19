@@ -1,4 +1,6 @@
+
 using Microsoft.Extensions.DependencyInjection;
+using Sentinel.Infrastructure.Seeding;
 
 namespace Sentinel.API.Modules;
 
@@ -7,5 +9,14 @@ namespace Sentinel.API.Modules;
 // sustituyendo a la implementación vacía de Infrastructure.
 public static class RequisitosModule
 {
-    public static IServiceCollection AddRequisitosModule(this IServiceCollection s) => s;
+    public static IServiceCollection AddRequisitosModule(this IServiceCollection s)
+    {
+        s.AddScoped<CatalogoSeeder>();
+        s.AddHostedService<CatalogoSeederHostedService>();
+
+        // PR2: cuando escribas MotorRequisitos, va aquí:
+        // s.AddScoped<IMotorRequisitos, MotorRequisitos>();
+
+        return s;
+    }
 }
