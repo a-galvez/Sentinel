@@ -25,6 +25,8 @@ public sealed class SentinelFactory : WebApplicationFactory<Program>
                     ["Jwt:Secret"] = "clave-de-prueba-con-al-menos-32-caracteres!",
                     ["Jwt:Issuer"] = "sentinel-test",
                     ["Jwt:Audience"] = "sentinel-test",
+                    ["Jwt:AccesoMinutos"] = "15",
+                    ["Jwt:RefreshDias"] = "7",
                     ["MIGRATE_ON_START"] = "false"
                 })
                 .Build());
