@@ -21,45 +21,55 @@ public class CatalogoSeederTests
     }
 
     [Fact]
-    public async Task Siembra_las_cinco_reglas_de_la_plantilla()
+    public async Task Siembra_las_plantillas_del_ejemplo_para_nueva()
     {
         await using var db = DbContextEnMemoria.Crear();
 
         await new CatalogoSeeder(db).SembrarAsync(default);
 
-        Assert.Equal(5, db.DocumentosRequisito.Count());
+        // REG-MED (6) + LIC-FARM (5) + LIC-DROG (5), todas del trámite Nueva.
+        Assert.Equal(16, db.DocumentosRequisito.Count());
     }
 
     [Fact]
-    public async Task Plantilla_producto_tiene_dos_requisitos_ordenados()
+    public async Task Siembra_las_tres_reglas_y_la_dependencia_del_ejemplo()
+    {
+        await using var db = DbContextEnMemoria.Crear();
+        await new CatalogoSeeder(db).SembrarAsync(default);
+
+        Assert.Equal(3, db.ReglasAplicabilidad.Count());
+        Assert.Single(db.DocumentosDependencia);
+    }
+
+    [Fact]
+    public async Task Plantilla_producto_tiene_seis_requisitos_ordenados()
     {
         await using var db = DbContextEnMemoria.Crear();
         await new CatalogoSeeder(db).SembrarAsync(default);
 
         var altaProducto = 1; // CatalogoIds.TiposTramite.AltaProducto
         var filas = db.DocumentosRequisito
-            .Where(d => d.TipoTramiteId == altaProducto)
+            .Where(d => d.TipoDocumentoId == 1 && d.TipoTramiteId == altaProducto)
             .OrderBy(d => d.Orden)
             .ToList();
 
-        Assert.Equal(2, filas.Count);
-        Assert.Equal(1, filas[0].Orden);
-        Assert.Equal(2, filas[1].Orden);
+        Assert.Equal(6, filas.Count);
+        Assert.Equal(Enumerable.Range(1, 6), filas.Select(f => f.Orden));
         Assert.All(filas, f => Assert.True(f.Obligatorio));
     }
 
     [Fact]
-    public async Task Plantilla_establecimiento_tiene_tres_requisitos()
+    public async Task Plantilla_licencia_drogueria_tiene_cinco_requisitos()
     {
         await using var db = DbContextEnMemoria.Crear();
         await new CatalogoSeeder(db).SembrarAsync(default);
 
         var altaEstablecimiento = 2; // CatalogoIds.TiposTramite.AltaEstablecimiento
         var filas = db.DocumentosRequisito
-            .Where(d => d.TipoTramiteId == altaEstablecimiento)
-            .ToList();
+            .Where(d => d.TipoDocumentoId == 3 && d.TipoTramiteId == altaEstablecimiento)
+            .ToList(); // 3 = LIC-DROG
 
-        Assert.Equal(3, filas.Count);
+        Assert.Equal(5, filas.Count);
     }
 
     private static (int tiposDocumento, int requisitos, int tiposTramite, int documentosRequisito) ContarTodo(

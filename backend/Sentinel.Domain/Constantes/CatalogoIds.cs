@@ -30,21 +30,34 @@ public static class CatalogoIds
         // El sufijo indica a qué entidad se asocia el documento.
         // El Codigo (string, único en BD) es el identificador estable de negocio;
         // estos int son los ids que el seed fija para que el código no dependa de la secuencia.
-        public const int RegistroSanitarioProducto = 1;  // Producto
-        public const int PermisoImportacionProducto = 2;  // Producto (reservado, no se siembra en 1A)
-        public const int LicenciaSanitariaProducto = 3;  // Producto
-        public const int LicenciaFuncionamientoEstablecimiento = 4;  // LicenciaSanitaria
-        public const int RegistroPropietarioEstablecimiento = 5;  // Establecimiento
-        public const int AvisoFuncionamientoEstablecimiento = 6;  // Establecimiento
+        // El nombre sigue el flujo, no el nombre legal del documento: el valor es el mismo
+        // tipo de documento aunque el Codigo (REG-MED, LIC-FARM, LIC-DROG) diga otra cosa.
+        public const int RegistroSanitarioProducto = 1;             // Producto · REG-MED
+        public const int PermisoImportacionProducto = 2;            // Producto (reservado)
+        public const int LicenciaSanitariaProducto = 3;             // Establecimiento · LIC-DROG
+        public const int LicenciaFuncionamientoEstablecimiento = 4; // Establecimiento · LIC-FARM
+        public const int RegistroPropietarioEstablecimiento = 5;    // Establecimiento (reservado)
+        public const int AvisoFuncionamientoEstablecimiento = 6;    // Establecimiento (reservado)
     }
 
     public static class Requisitos
     {
-        public const int PresentarRegistroSanitario = 1;  // Documento
-        public const int PresentarPermisoImportacion = 2;  // Documento (reservado, no se siembra en 1A)
-        public const int PresentarLicenciaSanitaria = 3;  // Documento
-        public const int PresentarLicenciaFuncionamiento = 4;  // Documento
-        public const int PresentarRegistroPropietario = 5;  // Documento
-        public const int PresentarAvisoFuncionamiento = 6;  // Documento
+        // Ids del ejemplo del PDF (Docs/sentinel-explicacion-y-ejemplo), trámite Nueva.
+        public const int SolicitudArsa = 1;          // Documento
+        public const int DeclaracionJurada = 2;      // Documento
+        public const int PlanosLocal = 3;            // Documento
+        public const int DatosRegente = 4;           // Dato
+        public const int PagoTarifa = 5;             // Acción
+        public const int FichaTecnica = 6;           // Documento
+        public const int CertificadoBpm = 7;         // Documento
+        public const int Etiqueta = 8;               // Documento
+    }
+
+    public static class Reglas
+    {
+        // R1..R3 del ejemplo del PDF.
+        public const int LicenciaFarmacia = 1;       // Farmacia → LIC-FARM
+        public const int LicenciaDrogueria = 2;      // Droguería → LIC-DROG
+        public const int RegistroMedicamento = 3;    // Medicamento → REG-MED
     }
 }
