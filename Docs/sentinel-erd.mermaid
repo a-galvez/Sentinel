@@ -1,0 +1,159 @@
+erDiagram
+    EMPRESA {
+        guid EmpresaId PK
+        string Nombre
+        datetime FechaRegistro
+    }
+    USUARIO {
+        guid UsuarioId PK
+        guid EmpresaId FK "Multi-tenant"
+        string Nombre
+        string Correo "Unico global"
+        string PasswordHash
+        boolean Activo
+    }
+    REFRESH_TOKEN {
+        guid RefreshTokenId PK
+        guid UsuarioId FK
+        string TokenHash
+        datetime Expira
+        boolean Revocado
+        guid ReemplazadoPorId "Nullable"
+    }
+    ESTABLECIMIENTO {
+        guid EstablecimientoId PK
+        guid EmpresaId FK "Multi-tenant"
+        guid TipoEstablecimientoId FK
+        string Nombre
+        string Ubicacion
+        boolean DadoDeBaja "Baja logica"
+    }
+    LICENCIA_SANITARIA {
+        guid LicenciaId PK
+        guid EstablecimientoId FK "Una por establecimiento"
+        guid EmpresaId FK "Multi-tenant"
+        guid TipoDocumentoId FK "Asignado por el motor"
+        guid EstadoVencimientoId FK "En tramite, Vigente, Por vencer, Vencido"
+        string NumeroLicencia "Null hasta emitirse"
+        date FechaEmision "Null hasta emitirse"
+        date FechaVencimiento "Null hasta emitirse. Emision + VigenciaMeses"
+        boolean DadoDeBaja "Baja logica"
+    }
+    PRODUCTO {
+        guid ProductoId PK
+        guid EmpresaId FK "Multi-tenant"
+        guid CategoriaProductoId FK
+        string Nombre
+        boolean DadoDeBaja "Baja logica"
+    }
+    REGISTRO_SANITARIO {
+        guid RegistroId PK
+        guid ProductoId FK "Uno por producto"
+        guid EmpresaId FK "Multi-tenant"
+        guid TipoDocumentoId FK "Asignado por el motor"
+        guid EstadoVencimientoId FK "En tramite, Vigente, Por vencer, Vencido"
+        string NumeroRegistro "Null hasta emitirse. Unico por empresa, ignora NULL"
+        date FechaEmision "Null hasta emitirse"
+        date FechaVencimiento "Null hasta emitirse. Emision + VigenciaMeses"
+        boolean DadoDeBaja "Baja logica"
+    }
+    CHECKLIST_REQUISITO {
+        guid ChecklistId PK
+        guid EmpresaId FK "Multi-tenant"
+        guid RequisitoId FK
+        guid RegistroId FK "Nullable, uno de los dos"
+        guid LicenciaId FK "Nullable, uno de los dos"
+        guid EstadoRequisitoId FK "Pendiente, Cumplido"
+        guid ResponsableUsuarioId FK "Nullable"
+        int Orden "Copiado del catalogo"
+        date FechaLimite
+        datetime FechaCumplimiento
+    }
+    TIPO_ESTABLECIMIENTO {
+        guid TipoEstablecimientoId PK
+        string Nombre "Farmacia, Drogueria, Bodega"
+    }
+    CATEGORIA_PRODUCTO {
+        guid CategoriaProductoId PK
+        string Nombre "Medicamento, Cosmetico"
+    }
+    ESTADO_VENCIMIENTO {
+        guid EstadoVencimientoId PK
+        string Nombre "En tramite, Vigente, Por vencer, Vencido"
+    }
+    ESTADO_REQUISITO {
+        guid EstadoRequisitoId PK
+        string Nombre "Pendiente, Cumplido"
+    }
+    TIPO_REQUISITO {
+        guid TipoRequisitoId PK
+        string Nombre "Documento, Dato, Accion"
+    }
+    AMBITO_DOCUMENTO {
+        guid AmbitoDocumentoId PK
+        string Nombre "Producto, Establecimiento"
+    }
+    TIPO_DOCUMENTO {
+        guid TipoDocumentoId PK
+        guid AmbitoDocumentoId FK "Aplica a"
+        string Codigo "Unico"
+        string Nombre
+        string AutoridadEmisora
+        string BaseLegal
+        int VigenciaMeses
+        boolean Activo
+    }
+    REQUISITO {
+        guid RequisitoId PK
+        guid TipoRequisitoId FK
+        string Descripcion
+        boolean Activo
+    }
+    DOCUMENTO_REQUISITO {
+        guid TipoDocumentoId PK,FK
+        guid RequisitoId PK,FK
+        boolean Obligatorio
+        int Orden
+    }
+    DOCUMENTO_DEPENDENCIA {
+        guid TipoDocumentoId PK,FK "Documento que depende"
+        guid RequiereTipoDocumentoId PK,FK "Licencia emitida y no vencida requerida (validado en backend)"
+    }
+    REGLA_APLICABILIDAD {
+        guid ReglaId PK
+        guid TipoDocumentoId FK "Documento que se activa"
+        int Prioridad "Define que regla se aplica primero en caso de que se solapen"
+        string CondicionJson "Ids de tipo o categoria, Y/O en el JSON. Al menos una condicion (validado en backend)"
+    }
+
+    EMPRESA ||--o{ USUARIO : tiene
+    EMPRESA ||--o{ ESTABLECIMIENTO : gestiona
+    EMPRESA ||--o{ PRODUCTO : registra
+    EMPRESA ||--o{ LICENCIA_SANITARIA : aisla
+    EMPRESA ||--o{ REGISTRO_SANITARIO : aisla
+    EMPRESA ||--o{ CHECKLIST_REQUISITO : aisla
+
+    USUARIO ||--o{ REFRESH_TOKEN : sesiones
+    USUARIO |o--o{ CHECKLIST_REQUISITO : "es responsable de"
+
+    TIPO_ESTABLECIMIENTO ||--o{ ESTABLECIMIENTO : clasifica
+    CATEGORIA_PRODUCTO ||--o{ PRODUCTO : clasifica
+    ESTADO_VENCIMIENTO ||--o{ REGISTRO_SANITARIO : estado
+    ESTADO_VENCIMIENTO ||--o{ LICENCIA_SANITARIA : estado
+    ESTADO_REQUISITO ||--o{ CHECKLIST_REQUISITO : estado
+    TIPO_REQUISITO ||--o{ REQUISITO : clasifica
+    AMBITO_DOCUMENTO ||--o{ TIPO_DOCUMENTO : clasifica
+
+    ESTABLECIMIENTO ||--o| LICENCIA_SANITARIA : posee
+    PRODUCTO ||--o| REGISTRO_SANITARIO : posee
+    REGISTRO_SANITARIO |o--o{ CHECKLIST_REQUISITO : "tiene checklist"
+    LICENCIA_SANITARIA |o--o{ CHECKLIST_REQUISITO : "tiene checklist"
+    REQUISITO ||--o{ CHECKLIST_REQUISITO : "se copia en"
+
+    TIPO_DOCUMENTO ||--o{ REGISTRO_SANITARIO : tipifica
+    TIPO_DOCUMENTO ||--o{ LICENCIA_SANITARIA : tipifica
+    TIPO_DOCUMENTO ||--o{ DOCUMENTO_REQUISITO : exige
+    REQUISITO ||--o{ DOCUMENTO_REQUISITO : "compartido por"
+    TIPO_DOCUMENTO ||--o{ DOCUMENTO_DEPENDENCIA : "depende de"
+    TIPO_DOCUMENTO ||--o{ DOCUMENTO_DEPENDENCIA : "es requerido por"
+    TIPO_DOCUMENTO ||--o{ REGLA_APLICABILIDAD : "se activa con"
