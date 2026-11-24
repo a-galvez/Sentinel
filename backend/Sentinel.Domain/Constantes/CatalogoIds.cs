@@ -60,4 +60,16 @@ public static class CatalogoIds
         public const int LicenciaDrogueria = 2;      // Droguería → LIC-DROG
         public const int RegistroMedicamento = 3;    // Medicamento → REG-MED
     }
+
+    public static class AmbitosDocumento
+    {
+        public const int Producto = 1;
+        public const int Establecimiento = 2;
+    }
+
+    public static class TiposRequisito {
+        public const int Documento = 1;
+        public const int Dato = 2;
+        public const int Accion = 3;
+    }
 }

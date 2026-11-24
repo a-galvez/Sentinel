@@ -10,7 +10,7 @@ public sealed record RequisitoDto(
     Guid Id,
     int Orden,
     string Descripcion,
-    TipoRequisito Tipo,
+    int Tipo,
     EstadoRequisito Estado,
     Guid? ResponsableId,
     string? ResponsableNombre,

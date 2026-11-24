@@ -66,7 +66,7 @@ public sealed class ChecklistReader(IAppDbContext db, IEvaluaDependencias depend
                 Id: f.c.ChecklistRequisitoId,
                 Orden: ordenes.TryGetValue(f.r.RequisitoId, out var orden) ? orden : 0,
                 Descripcion: f.r.Descripcion,
-                Tipo: f.r.TipoRequisito,
+                Tipo: f.r.TipoRequisitoId,
                 Estado: f.c.Estado,
                 ResponsableId: f.c.ResponsableUsuarioId,
                 ResponsableNombre: NombresUsuarios.Buscar(nombresUsuarios, f.c.ResponsableUsuarioId),

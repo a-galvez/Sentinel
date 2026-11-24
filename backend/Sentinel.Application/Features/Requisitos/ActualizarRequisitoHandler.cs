@@ -78,7 +78,7 @@ public sealed class ActualizarRequisitoHandler(IAppDbContext db, ICurrentTenant 
             Id: fila.ChecklistRequisitoId,
             Orden: orden,
             Descripcion: requisito.Descripcion,
-            Tipo: requisito.TipoRequisito,
+            Tipo: requisito.TipoRequisitoId,
             Estado: fila.Estado,
             ResponsableId: fila.ResponsableUsuarioId,
             ResponsableNombre: NombresUsuarios.Buscar(nombres, fila.ResponsableUsuarioId),
