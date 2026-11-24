@@ -35,6 +35,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
         // Índices únicos del contrato (H1/H2/H3).
         mb.Entity<Usuario>().HasIndex(u => u.Correo).IsUnique();
         mb.Entity<Producto>().HasIndex(p => new { p.EmpresaId, p.NumeroRegistro }).IsUnique();
+        mb.Entity<TipoDocumento>().HasIndex(t => t.Codigo).IsUnique();
         mb.Entity<RefreshToken>().HasIndex(r => r.TokenHash);
 
         // Claves compuestas de los catálogos que no tienen id propio.

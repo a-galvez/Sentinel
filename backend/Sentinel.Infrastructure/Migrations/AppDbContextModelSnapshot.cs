@@ -22,6 +22,23 @@ namespace Sentinel.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Sentinel.Domain.Entities.AmbitoDocumento", b =>
+                {
+                    b.Property<int>("AmbitoDocumentoId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AmbitoDocumentoId"));
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("AmbitoDocumentoId");
+
+                    b.ToTable("AmbitosDocumento");
+                });
+
             modelBuilder.Entity("Sentinel.Domain.Entities.CategoriaProducto", b =>
                 {
                     b.Property<int>("CategoriaProductoId")
@@ -310,10 +327,12 @@ namespace Sentinel.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("TipoRequisito")
+                    b.Property<int>("TipoRequisitoId")
                         .HasColumnType("integer");
 
                     b.HasKey("RequisitoId");
+
+                    b.HasIndex("TipoRequisitoId");
 
                     b.ToTable("Requisitos");
                 });
@@ -329,7 +348,7 @@ namespace Sentinel.Infrastructure.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("AplicaA")
+                    b.Property<int>("AmbitoDocumentoId")
                         .HasColumnType("integer");
 
                     b.Property<string>("AutoridadEmisora")
@@ -353,6 +372,8 @@ namespace Sentinel.Infrastructure.Migrations
 
                     b.HasKey("TipoDocumentoId");
 
+                    b.HasIndex("AmbitoDocumentoId");
+
                     b.HasIndex("Codigo")
                         .IsUnique();
 
@@ -374,6 +395,23 @@ namespace Sentinel.Infrastructure.Migrations
                     b.HasKey("TipoEstablecimientoId");
 
                     b.ToTable("TiposEstablecimiento");
+                });
+
+            modelBuilder.Entity("Sentinel.Domain.Entities.TipoRequisito", b =>
+                {
+                    b.Property<int>("TipoRequisitoId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TipoRequisitoId"));
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("TipoRequisitoId");
+
+                    b.ToTable("TiposRequisito");
                 });
 
             modelBuilder.Entity("Sentinel.Domain.Entities.TipoTramite", b =>
@@ -447,6 +485,28 @@ namespace Sentinel.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("TipoDocumentoId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Sentinel.Domain.Entities.Requisito", b =>
+                {
+                    b.HasOne("Sentinel.Domain.Entities.TipoRequisito", "TipoRequisito")
+                        .WithMany()
+                        .HasForeignKey("TipoRequisitoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TipoRequisito");
+                });
+
+            modelBuilder.Entity("Sentinel.Domain.Entities.TipoDocumento", b =>
+                {
+                    b.HasOne("Sentinel.Domain.Entities.AmbitoDocumento", "AmbitoDocumento")
+                        .WithMany()
+                        .HasForeignKey("AmbitoDocumentoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AmbitoDocumento");
                 });
 #pragma warning restore 612, 618
         }
