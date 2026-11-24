@@ -1,6 +1,7 @@
 
 // Sentinel.Tests/Requisitos/DbContextEnMemoria.cs
 using Microsoft.EntityFrameworkCore;
+using Sentinel.Application.Abstractions;
 using Sentinel.Infrastructure.Persistence;
 
 namespace Sentinel.Tests.Requisitos;
@@ -8,7 +9,7 @@ namespace Sentinel.Tests.Requisitos;
 public static class DbContextEnMemoria
 {
     // Cada test usa una base distinta para no compartir estado.
-    public static AppDbContext Crear(FakeTenant? tenant = null)
+    public static AppDbContext Crear(ICurrentTenant? tenant = null)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"sentinel-test-{Guid.NewGuid()}")

@@ -1,6 +1,8 @@
-
 using Microsoft.Extensions.DependencyInjection;
+using Sentinel.Application.Abstractions;
+using Sentinel.Application.Features.Requisitos;
 using Sentinel.Infrastructure.Seeding;
+using Sentinel.Infrastructure.Services;
 
 namespace Sentinel.API.Modules;
 
@@ -14,8 +16,13 @@ public static class RequisitosModule
         s.AddScoped<CatalogoSeeder>();
         s.AddHostedService<CatalogoSeederHostedService>();
 
-        // PR2: cuando escribas MotorRequisitos, va aquí:
-        // s.AddScoped<IMotorRequisitos, MotorRequisitos>();
+        // M6: motor real y evaluador de dependencias (reemplazan MotorRequisitosVacio).
+        s.AddScoped<IMotorRequisitos, MotorRequisitos>();
+        s.AddScoped<IEvaluaDependencias, EvaluadorDependencias>();
+
+        // Handlers del checklist y del PATCH.
+        s.AddScoped<ChecklistReader>();
+        s.AddScoped<ActualizarRequisitoHandler>();
 
         return s;
     }
