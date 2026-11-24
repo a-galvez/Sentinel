@@ -24,6 +24,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<DocumentoDependencia> DocumentosDependencia => Set<DocumentoDependencia>();
     public DbSet<ReglaAplicabilidad> ReglasAplicabilidad => Set<ReglaAplicabilidad>();
     public DbSet<ChecklistRequisito> ChecklistRequisitos => Set<ChecklistRequisito>();
+    public DbSet<AmbitoDocumento> AmbitosDocumento => Set<AmbitoDocumento>();
+    public DbSet<TipoRequisito> TiposRequisito => Set<TipoRequisito>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -33,7 +35,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
         // Índices únicos del contrato (H1/H2/H3).
         mb.Entity<Usuario>().HasIndex(u => u.Correo).IsUnique();
         mb.Entity<Producto>().HasIndex(p => new { p.EmpresaId, p.NumeroRegistro }).IsUnique();
-        mb.Entity<TipoDocumento>().HasIndex(t => t.Codigo).IsUnique();
         mb.Entity<RefreshToken>().HasIndex(r => r.TokenHash);
 
         // Claves compuestas de los catálogos que no tienen id propio.
@@ -59,6 +60,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
             .HasOne<TipoDocumento>()
             .WithMany()
             .HasForeignKey(l => l.TipoDocumentoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+
+        mb.Entity<TipoDocumento>()
+            .HasOne(t => t.AmbitoDocumento)
+            .WithMany()
+            .HasForeignKey(t => t.AmbitoDocumentoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        mb.Entity<Requisito>()
+            .HasOne(r => r.TipoRequisito)
+            .WithMany()
+            .HasForeignKey(r => r.TipoRequisitoId)
             .OnDelete(DeleteBehavior.Restrict);
 
         mb.AplicarFiltrosGlobales(this);

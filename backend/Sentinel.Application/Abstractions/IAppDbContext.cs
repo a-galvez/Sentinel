@@ -20,5 +20,8 @@ public interface IAppDbContext
     DbSet<DocumentoDependencia> DocumentosDependencia { get; }
     DbSet<ReglaAplicabilidad> ReglasAplicabilidad { get; }
     DbSet<ChecklistRequisito> ChecklistRequisitos { get; }
+    DbSet<AmbitoDocumento> AmbitosDocumento { get; }
+    DbSet<TipoRequisito> TiposRequisito { get; }
+
     Task<int> SaveChangesAsync(CancellationToken ct);
 }

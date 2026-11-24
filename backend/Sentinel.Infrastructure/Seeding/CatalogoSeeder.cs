@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Sentinel.Application.Abstractions;
 using Sentinel.Domain.Constantes;
 using Sentinel.Domain.Entities;
-using Sentinel.Domain.Enums;
 using Sentinel.Infrastructure.Persistence;
 
 namespace Sentinel.Infrastructure.Seeding;
@@ -16,8 +15,11 @@ namespace Sentinel.Infrastructure.Seeding;
 // los requisitos legales reales deben verificarse contra la normativa de ARSA (H11 DoD).
 public sealed class CatalogoSeeder(IAppDbContext db)
 {
+
     public async Task SembrarAsync(CancellationToken ct)
     {
+        await SembrarAmbitosDocumentoAsync(ct);
+        await SembrarTiposRequisitoAsync(ct);
         await SembrarCategoriasProductoAsync(ct);
         await SembrarTiposEstablecimientoAsync(ct);
         await SembrarTiposTramiteAsync(ct);
@@ -29,6 +31,7 @@ public sealed class CatalogoSeeder(IAppDbContext db)
 
         await db.SaveChangesAsync(ct);
     }
+
 
     private async Task SembrarCategoriasProductoAsync(CancellationToken ct)
     {
@@ -79,7 +82,9 @@ public sealed class CatalogoSeeder(IAppDbContext db)
                 TipoDocumentoId = CatalogoIds.TiposDocumento.RegistroSanitarioProducto,
                 Codigo = "REG-MED",
                 Nombre = "Registro sanitario de medicamento",
-                AplicaA = AplicaA.Producto,
+
+                AmbitoDocumentoId = CatalogoIds.AmbitosDocumento.Producto,
+
                 AutoridadEmisora = "ARSA",
                 BaseLegal = "(por verificar)",
                 VigenciaMeses = 60,
@@ -92,7 +97,9 @@ public sealed class CatalogoSeeder(IAppDbContext db)
                 TipoDocumentoId = CatalogoIds.TiposDocumento.LicenciaFuncionamientoEstablecimiento,
                 Codigo = "LIC-FARM",
                 Nombre = "Licencia sanitaria de farmacia",
-                AplicaA = AplicaA.Establecimiento,
+
+                AmbitoDocumentoId = CatalogoIds.AmbitosDocumento.Establecimiento,
+
                 AutoridadEmisora = "ARSA",
                 BaseLegal = "(por verificar)",
                 VigenciaMeses = 12,
@@ -105,7 +112,9 @@ public sealed class CatalogoSeeder(IAppDbContext db)
                 TipoDocumentoId = CatalogoIds.TiposDocumento.LicenciaSanitariaProducto,
                 Codigo = "LIC-DROG",
                 Nombre = "Licencia sanitaria de droguería",
-                AplicaA = AplicaA.Establecimiento,
+
+                AmbitoDocumentoId = CatalogoIds.AmbitosDocumento.Establecimiento,
+
                 AutoridadEmisora = "ARSA",
                 BaseLegal = "(por verificar)",
                 VigenciaMeses = 12,
@@ -113,41 +122,9 @@ public sealed class CatalogoSeeder(IAppDbContext db)
             });
     }
 
-    private async Task SembrarRequisitosAsync(CancellationToken ct)
-    {
-        await AgregarRequisitoAsync(CatalogoIds.Requisitos.SolicitudArsa,
-            "Solicitud en el formulario de ARSA", TipoRequisito.Documento, ct);
-
-        await AgregarRequisitoAsync(CatalogoIds.Requisitos.DeclaracionJurada,
-            "Declaración jurada del representante legal", TipoRequisito.Documento, ct);
-
-        await AgregarRequisitoAsync(CatalogoIds.Requisitos.PlanosLocal,
-            "Planos del local", TipoRequisito.Documento, ct);
-
-        await AgregarRequisitoAsync(CatalogoIds.Requisitos.DatosRegente,
-            "Datos del regente farmacéutico", TipoRequisito.Dato, ct);
-
-        await AgregarRequisitoAsync(CatalogoIds.Requisitos.PagoTarifa,
-            "Pago de la tarifa", TipoRequisito.Accion, ct);
-
-        await AgregarRequisitoAsync(CatalogoIds.Requisitos.FichaTecnica,
-            "Ficha técnica del producto", TipoRequisito.Documento, ct);
-
-        await AgregarRequisitoAsync(CatalogoIds.Requisitos.CertificadoBpm,
-            "Certificado de buenas prácticas de manufactura del fabricante", TipoRequisito.Documento, ct);
-
-        await AgregarRequisitoAsync(CatalogoIds.Requisitos.Etiqueta,
-            "Etiqueta del producto", TipoRequisito.Documento, ct);
-    }
-
-    private async Task AgregarRequisitoAsync(int id, string descripcion, TipoRequisito tipo, CancellationToken ct)
-        => await AgregarSiFaltaAsync(db.Requisitos, x => x.RequisitoId == id, ct,
-            () => new Requisito { RequisitoId = id, Descripcion = descripcion, TipoRequisito = tipo, Activo = true });
 
     private async Task SembrarDocumentosRequisitoAsync(CancellationToken ct)
     {
-        // Del ejemplo del PDF, sección "DOCUMENTO_REQUISITO", trámite Nueva.
-        // REG-MED · Nueva: los 6 requisitos.
         var regMed = (CatalogoIds.TiposDocumento.RegistroSanitarioProducto, CatalogoIds.TiposTramite.AltaProducto);
         await AgregarDocumentoRequisitoAsync(regMed.Item1, regMed.Item2, CatalogoIds.Requisitos.SolicitudArsa, orden: 1, ct);
         await AgregarDocumentoRequisitoAsync(regMed.Item1, regMed.Item2, CatalogoIds.Requisitos.DeclaracionJurada, orden: 2, ct);
@@ -156,8 +133,6 @@ public sealed class CatalogoSeeder(IAppDbContext db)
         await AgregarDocumentoRequisitoAsync(regMed.Item1, regMed.Item2, CatalogoIds.Requisitos.Etiqueta, orden: 5, ct);
         await AgregarDocumentoRequisitoAsync(regMed.Item1, regMed.Item2, CatalogoIds.Requisitos.PagoTarifa, orden: 6, ct);
 
-        // LIC-FARM · Nueva: el PDF omite sus filas; se siembra la misma plantilla de licencia
-        // que LIC-DROG para que una farmacia también tenga checklist.
         var licFarm = (CatalogoIds.TiposDocumento.LicenciaFuncionamientoEstablecimiento, CatalogoIds.TiposTramite.AltaEstablecimiento);
         await AgregarDocumentoRequisitoAsync(licFarm.Item1, licFarm.Item2, CatalogoIds.Requisitos.SolicitudArsa, orden: 1, ct);
         await AgregarDocumentoRequisitoAsync(licFarm.Item1, licFarm.Item2, CatalogoIds.Requisitos.DeclaracionJurada, orden: 2, ct);
@@ -165,7 +140,6 @@ public sealed class CatalogoSeeder(IAppDbContext db)
         await AgregarDocumentoRequisitoAsync(licFarm.Item1, licFarm.Item2, CatalogoIds.Requisitos.DatosRegente, orden: 4, ct);
         await AgregarDocumentoRequisitoAsync(licFarm.Item1, licFarm.Item2, CatalogoIds.Requisitos.PagoTarifa, orden: 5, ct);
 
-        // LIC-DROG · Nueva: los 5 requisitos. Es el documento que bloquea/desbloquea REG-MED.
         var licDrog = (CatalogoIds.TiposDocumento.LicenciaSanitariaProducto, CatalogoIds.TiposTramite.AltaEstablecimiento);
         await AgregarDocumentoRequisitoAsync(licDrog.Item1, licDrog.Item2, CatalogoIds.Requisitos.SolicitudArsa, orden: 1, ct);
         await AgregarDocumentoRequisitoAsync(licDrog.Item1, licDrog.Item2, CatalogoIds.Requisitos.DeclaracionJurada, orden: 2, ct);
@@ -173,6 +147,45 @@ public sealed class CatalogoSeeder(IAppDbContext db)
         await AgregarDocumentoRequisitoAsync(licDrog.Item1, licDrog.Item2, CatalogoIds.Requisitos.DatosRegente, orden: 4, ct);
         await AgregarDocumentoRequisitoAsync(licDrog.Item1, licDrog.Item2, CatalogoIds.Requisitos.PagoTarifa, orden: 5, ct);
     }
+
+    private async Task SembrarRequisitosAsync(CancellationToken ct)
+    {
+        await AgregarRequisitoAsync(CatalogoIds.Requisitos.SolicitudArsa,
+            "Solicitud en el formulario de ARSA", CatalogoIds.TiposRequisito.Documento, ct);
+
+        await AgregarRequisitoAsync(CatalogoIds.Requisitos.DeclaracionJurada,
+            "Declaración jurada del representante legal", CatalogoIds.TiposRequisito.Documento, ct);
+
+        await AgregarRequisitoAsync(CatalogoIds.Requisitos.PlanosLocal,
+            "Planos del local", CatalogoIds.TiposRequisito.Documento, ct);
+
+        await AgregarRequisitoAsync(CatalogoIds.Requisitos.DatosRegente,
+            "Datos del regente farmacéutico", CatalogoIds.TiposRequisito.Dato, ct);
+
+        await AgregarRequisitoAsync(CatalogoIds.Requisitos.PagoTarifa,
+            "Pago de la tarifa", CatalogoIds.TiposRequisito.Accion, ct);
+
+        await AgregarRequisitoAsync(CatalogoIds.Requisitos.FichaTecnica,
+            "Ficha técnica del producto", CatalogoIds.TiposRequisito.Documento, ct);
+
+        await AgregarRequisitoAsync(CatalogoIds.Requisitos.CertificadoBpm,
+            "Certificado de buenas prácticas de manufactura del fabricante", CatalogoIds.TiposRequisito.Documento, ct);
+
+        await AgregarRequisitoAsync(CatalogoIds.Requisitos.Etiqueta,
+            "Etiqueta del producto", CatalogoIds.TiposRequisito.Documento, ct);
+    }
+
+    private async Task AgregarRequisitoAsync(int id, string descripcion, int tipoRequisitoId, CancellationToken ct)
+        => await AgregarSiFaltaAsync(db.Requisitos, x => x.RequisitoId == id, ct,
+            () => new Requisito
+            {
+                RequisitoId = id,
+                Descripcion = descripcion,
+                TipoRequisitoId = tipoRequisitoId,
+                Activo = true
+            });
+
+
 
     private async Task SembrarDependenciasAsync(CancellationToken ct)
     {
@@ -189,6 +202,33 @@ public sealed class CatalogoSeeder(IAppDbContext db)
                 RequiereTipoDocumentoId = CatalogoIds.TiposDocumento.LicenciaSanitariaProducto
             }, ct);
         }
+    }
+
+
+    private async Task SembrarAmbitosDocumentoAsync(CancellationToken ct)
+    {
+        await AgregarSiFaltaAsync(db.AmbitosDocumento,
+            x => x.AmbitoDocumentoId == CatalogoIds.AmbitosDocumento.Producto, ct,
+            () => new AmbitoDocumento { AmbitoDocumentoId = CatalogoIds.AmbitosDocumento.Producto, Nombre = "Producto" });
+
+        await AgregarSiFaltaAsync(db.AmbitosDocumento,
+            x => x.AmbitoDocumentoId == CatalogoIds.AmbitosDocumento.Establecimiento, ct,
+            () => new AmbitoDocumento { AmbitoDocumentoId = CatalogoIds.AmbitosDocumento.Establecimiento, Nombre = "Establecimiento" });
+    }
+
+    private async Task SembrarTiposRequisitoAsync(CancellationToken ct)
+    {
+        await AgregarSiFaltaAsync(db.TiposRequisito,
+            x => x.TipoRequisitoId == CatalogoIds.TiposRequisito.Documento, ct,
+            () => new TipoRequisito { TipoRequisitoId = CatalogoIds.TiposRequisito.Documento, Nombre = "Documento" });
+
+        await AgregarSiFaltaAsync(db.TiposRequisito,
+            x => x.TipoRequisitoId == CatalogoIds.TiposRequisito.Dato, ct,
+            () => new TipoRequisito { TipoRequisitoId = CatalogoIds.TiposRequisito.Dato, Nombre = "Dato" });
+
+        await AgregarSiFaltaAsync(db.TiposRequisito,
+            x => x.TipoRequisitoId == CatalogoIds.TiposRequisito.Accion, ct,
+            () => new TipoRequisito { TipoRequisitoId = CatalogoIds.TiposRequisito.Accion, Nombre = "Acción" });
     }
 
     private async Task SembrarReglasAsync(CancellationToken ct)
