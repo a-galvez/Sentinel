@@ -1,0 +1,2889 @@
+openapi: 3.0.3
+
+info:
+  title: Sentinel API (MVP)
+  version: 0.1.0
+  description: |
+    API del sistema experto Sentinel para el control de registros sanitarios
+    de productos y licencias sanitarias de establecimientos (ARSA, Honduras).
+
+    ## Organización por funciones
+    Cada grupo (tag) corresponde a una épica o función del MVP:
+
+    | Tag | Historias | Función |
+    |---|---|---|
+    | Autenticación | H1, H2 | Registro de empresa, login, refresh, logout |
+    | Catálogos | H3, H6, H4, H7 | Listas simples para formularios y filtros |
+    | Productos | H3, H4, H5 | Alta, listado, edición y baja de productos |
+    | Registros sanitarios | H3, H5, H11 | Verificación, emisión y baja del registro de un producto |
+    | Establecimientos | H6 | Alta, consulta y baja de establecimientos |
+    | Licencias sanitarias | H6, H7, H11 | Verificación, emisión, baja y listado de licencias |
+    | Checklist | H11 | Requisitos pendientes, avance y bloqueos |
+    | Alertas | H8 | Vencimientos en 30, 60 y 90 días y vencidos |
+    | Expediente | H9 | Expediente imprimible de un producto |
+    | Dashboard | H10 | Totales de riesgo por estado |
+
+    ## Reglas transversales
+    - **Multi-tenant:** `empresaId` sale siempre del token de acceso, nunca se envía
+      en rutas ni cuerpos. Un recurso de otra empresa responde **404**, como si no existiera.
+    - **Baja lógica:** lo dado de baja no se borra, pero no aparece en listas, alertas,
+      dashboard ni expediente (responde 404 al consultarlo por id).
+    - **Un solo usuario por empresa** en el MVP (el administrador).
+    - **Fecha de referencia:** "hoy" es la fecha de Honduras (`America/Tegucigalpa`).
+    - **Estados de vencimiento:** `NoVerificado`, `EnTramite`, `Vigente` (vence en más
+      de 90 días), `PorVencer` (vence hoy o dentro de 90 días) y `Vencido`. El estado
+      se calcula en el backend con la fecha de vencimiento (emisión + `vigenciaMeses`).
+    - **Bloqueo de documentos:** no se guarda; se calcula al consultar el checklist.
+    - **Fuera del MVP:** renovación y congelar la descripción/tipo del requisito en el checklist.
+    - **Códigos de estado:** `400` datos inválidos (con `errors` por campo), `401` sin sesión
+      o credenciales incorrectas, `404` no existe, está dado de baja o es de otra empresa,
+      `409` conflicto (correo o número de registro duplicado, o el estado actual no permite
+      la operación). No se usa `403`: hay un solo usuario por empresa.
+    - Las fechas (`date`) usan formato `YYYY-MM-DD`; las marcas de tiempo, ISO 8601 UTC.
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Desarrollo local
+
+tags:
+  - name: Autenticación
+    description: "Épica 1 (H1, H2). Registro de empresa, sesión y renovación de tokens."
+  - name: Catálogos
+    description: Catálogos simples globales de solo lectura.
+  - name: Productos
+    description: "Épica 2 (H3, H4, H5). Datos generales del producto."
+  - name: Registros sanitarios
+    description: "Épica 2 (H3, H5) y Épica 5 (H11). Registro sanitario único por producto."
+  - name: Establecimientos
+    description: "Épica 3 (H6). Locales físicos de la empresa."
+  - name: Licencias sanitarias
+    description: "Épica 3 (H6, H7) y Épica 5 (H11). Licencia única por establecimiento."
+  - name: Checklist
+    description: "Épica 5 (H11). Requisitos que se deben reunir cuando no se tiene el documento."
+  - name: Alertas
+    description: "Épica 4 (H8). Vencimientos agrupados por rango."
+  - name: Expediente
+    description: "Épica 5 (H9). Vista del expediente de un producto."
+  - name: Dashboard
+    description: "Épica 6 (H10). Totales de riesgo."
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ──────────────────────────── AUTENTICACIÓN ────────────────────────────
+  /auth/registro:
+    post:
+      tags: [Autenticación]
+      operationId: registrarEmpresa
+      summary: Registrar empresa y administrador (H1)
+      description: |
+        Crea la empresa y su usuario administrador en una sola transacción:
+        si falla uno, no se crea ninguno. El usuario queda con la sesión iniciada.
+        El correo es único en todo el sistema.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroEmpresaRequest'
+      responses:
+        '201':
+          description: Empresa y administrador creados. Sesión iniciada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SesionResponse'
+              examples:
+                sesion:
+                  summary: Empresa creada, sesión iniciada
+                  value:
+                    tokens:
+                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ejemplo
+                      refreshToken: rt_9f8e7d6c5b4a3210ejemplo
+                      expiraEn: '2026-11-23T15:45:00Z'
+                    usuario:
+                      usuarioId: 00000000-0000-4000-8000-000000000001
+                      nombre: María López
+                      correo: maria@farmacentro.example
+                      empresa:
+                        empresaId: 00000000-0000-4000-8000-000000000002
+                        nombre: Distribuidora FarmaCentro S.A.
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      correo:
+                      - El correo no tiene un formato válido.
+                      password:
+                      - La contraseña debe tener mínimo 8 caracteres.
+        '409':
+          description: El correo ya está registrado (el error se indica junto al campo `correo`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                correoDuplicado:
+                  summary: Correo ya registrado
+                  value:
+                    status: 409
+                    title: Conflicto
+                    detail: Ya existe una cuenta con ese correo.
+                    errors:
+                      correo:
+                      - El correo ya está registrado.
+
+  /auth/login:
+    post:
+      tags: [Autenticación]
+      operationId: iniciarSesion
+      summary: Iniciar sesión (H2)
+      description: |
+        Con datos incorrectos responde un único mensaje genérico, sin indicar
+        si falló el correo o la contraseña.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sesión iniciada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SesionResponse'
+              examples:
+                sesion:
+                  summary: Sesión iniciada
+                  value:
+                    tokens:
+                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ejemplo
+                      refreshToken: rt_9f8e7d6c5b4a3210ejemplo
+                      expiraEn: '2026-11-23T15:45:00Z'
+                    usuario:
+                      usuarioId: 00000000-0000-4000-8000-000000000001
+                      nombre: María López
+                      correo: maria@farmacentro.example
+                      empresa:
+                        empresaId: 00000000-0000-4000-8000-000000000002
+                        nombre: Distribuidora FarmaCentro S.A.
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      correo:
+                      - El correo es obligatorio.
+                      password:
+                      - La contraseña es obligatoria.
+        '401':
+          description: Credenciales incorrectas (mensaje único, sin indicar si falló el correo o la contraseña).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                credenciales:
+                  summary: Credenciales incorrectas
+                  value:
+                    status: 401
+                    title: Credenciales incorrectas
+                    detail: Correo o contraseña incorrectos.
+
+  /auth/refresh:
+    post:
+      tags: [Autenticación]
+      operationId: renovarSesion
+      summary: Renovar la sesión sin pedir datos (H2)
+      description: |
+        Intercambia un refresh token vigente por un nuevo par de tokens.
+        El token usado queda revocado y reemplazado (rotación).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Nuevo par de tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokensResponse'
+              examples:
+                tokens:
+                  summary: Nuevo par de tokens
+                  value:
+                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ejemplo
+                    refreshToken: rt_9f8e7d6c5b4a3210ejemplo
+                    expiraEn: '2026-11-23T15:45:00Z'
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      refreshToken:
+                      - El refresh token es obligatorio.
+        '401':
+          description: Refresh token inválido, vencido o revocado. El cliente debe ir al login.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                sesionVencida:
+                  summary: Sesión vencida
+                  value:
+                    status: 401
+                    title: Sesión vencida
+                    detail: El refresh token es inválido, venció o fue revocado. Inicia sesión de nuevo.
+
+  /auth/logout:
+    post:
+      tags: [Autenticación]
+      operationId: cerrarSesion
+      security: []
+      summary: Cerrar sesión (H2)
+      description: |
+        Revoca el refresh token; al cerrar sesión se pierde el acceso. Es idempotente:
+        si el refresh token ya estaba revocado o no existe, también responde 204. No exige access
+        token, para poder cerrar sesión aunque ya haya vencido.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Sesión cerrada.
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      refreshToken:
+                      - El refresh token es obligatorio.
+
+  /auth/me:
+    get:
+      tags: [Autenticación]
+      operationId: obtenerUsuarioActual
+      summary: Usuario y empresa de la sesión actual (H2)
+      description: Útil para proteger pantallas privadas y mostrar el responsable por defecto del checklist.
+      responses:
+        '200':
+          description: Usuario autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioActual'
+              examples:
+                usuario:
+                  summary: Usuario de la sesión
+                  value:
+                    usuarioId: 00000000-0000-4000-8000-000000000001
+                    nombre: María López
+                    correo: maria@farmacentro.example
+                    empresa:
+                      empresaId: 00000000-0000-4000-8000-000000000002
+                      nombre: Distribuidora FarmaCentro S.A.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  # ──────────────────────────── CATÁLOGOS ────────────────────────────
+  /catalogos/categorias-producto:
+    get:
+      tags: [Catálogos]
+      operationId: listarCategoriasProducto
+      summary: Categorías de producto (Medicamento, Cosmético)
+      responses:
+        '200':
+          description: Lista de elementos del catálogo.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogoItem'
+              examples:
+                categorias:
+                  summary: Categorías de producto
+                  value:
+                  - id: 00000000-0000-4000-8000-000000000101
+                    nombre: Medicamento
+                  - id: 00000000-0000-4000-8000-000000000102
+                    nombre: Cosmético
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /catalogos/tipos-establecimiento:
+    get:
+      tags: [Catálogos]
+      operationId: listarTiposEstablecimiento
+      summary: Tipos de establecimiento (Farmacia, Droguería, Bodega)
+      responses:
+        '200':
+          description: Lista de elementos del catálogo.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogoItem'
+              examples:
+                tipos:
+                  summary: Tipos de establecimiento
+                  value:
+                  - id: 00000000-0000-4000-8000-000000000111
+                    nombre: Farmacia
+                  - id: 00000000-0000-4000-8000-000000000112
+                    nombre: Droguería
+                  - id: 00000000-0000-4000-8000-000000000113
+                    nombre: Bodega
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /catalogos/estados-vencimiento:
+    get:
+      tags: [Catálogos]
+      operationId: listarEstadosVencimiento
+      summary: Estados de vencimiento (para filtros y semáforo)
+      description: Cada elemento trae `codigo` (el valor que se envía en el filtro `estado`) y `nombre` (texto para mostrar).
+      responses:
+        '200':
+          description: Lista de elementos del catálogo.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstadoCatalogoItem'
+              examples:
+                estados:
+                  summary: Estados de vencimiento
+                  value:
+                  - codigo: NoVerificado
+                    nombre: No verificado
+                  - codigo: EnTramite
+                    nombre: En trámite
+                  - codigo: Vigente
+                    nombre: Vigente
+                  - codigo: PorVencer
+                    nombre: Por vencer
+                  - codigo: Vencido
+                    nombre: Vencido
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  # ──────────────────────────── PRODUCTOS ────────────────────────────
+  /productos:
+    get:
+      tags: [Productos]
+      operationId: listarProductos
+      summary: Listar, buscar y filtrar productos con el estado de su registro (H4)
+      description: Excluye los productos dados de baja.
+      parameters:
+        - name: q
+          in: query
+          description: Busca por nombre del producto o número de registro.
+          schema: { type: string, maxLength: 200 }
+        - $ref: '#/components/parameters/EstadoFiltro'
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/TamanoPagina'
+      responses:
+        '200':
+          description: Página de productos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoPagina'
+              examples:
+                pagina:
+                  summary: Productos con el estado de su registro
+                  value:
+                    pagina: 1
+                    tamanoPagina: 20
+                    total: 2
+                    items:
+                    - productoId: 00000000-0000-4000-8000-000000000201
+                      nombre: Paracetamol 500 mg
+                      categoria:
+                        id: 00000000-0000-4000-8000-000000000101
+                        nombre: Medicamento
+                      registro:
+                        registroId: 00000000-0000-4000-8000-000000000401
+                        productoId: 00000000-0000-4000-8000-000000000201
+                        tipoDocumento:
+                          tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                          codigo: REG-MED
+                          nombre: Registro de medicamento
+                          autoridadEmisora: ARSA
+                          vigenciaMeses: 60
+                        estado: Vigente
+                        numero: RS-0001-EJ
+                        fechaEmision: '2026-10-15'
+                        fechaVencimiento: '2031-10-15'
+                        diasParaVencer: 1787
+                        requiereVerificacion: false
+                        tieneChecklist: false
+                    - productoId: 00000000-0000-4000-8000-000000000202
+                      nombre: Ibuprofeno 400 mg
+                      categoria:
+                        id: 00000000-0000-4000-8000-000000000101
+                        nombre: Medicamento
+                      registro:
+                        registroId: 00000000-0000-4000-8000-000000000402
+                        productoId: 00000000-0000-4000-8000-000000000202
+                        tipoDocumento:
+                          tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                          codigo: REG-MED
+                          nombre: Registro de medicamento
+                          autoridadEmisora: ARSA
+                          vigenciaMeses: 60
+                        estado: EnTramite
+                        numero: null
+                        fechaEmision: null
+                        fechaVencimiento: null
+                        diasParaVencer: null
+                        requiereVerificacion: false
+                        tieneChecklist: true
+        '400':
+          description: Parámetros de consulta inválidos. `errors` indica el mensaje junto al parámetro.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      estado:
+                      - 'El estado no es válido. Valores permitidos: NoVerificado, EnTramite, Vigente, PorVencer, Vencido.'
+                      pagina:
+                      - La página debe ser mayor o igual a 1.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+    post:
+      tags: [Productos]
+      operationId: crearProducto
+      summary: Registrar un producto (H3, H11)
+      description: |
+        Guarda el producto y, aparte, su registro sanitario con el documento que el
+        motor elige según la categoría (si varias reglas aplican, gana la de menor
+        `prioridad`). El registro queda en estado `NoVerificado`.
+
+        Si **ninguna regla aplica**, el producto se guarda sin registro ni checklist
+        y la respuesta trae `registro: null` y un `mensaje`.
+        El fabricante es la empresa; no se envía. Si `categoriaProductoId` no existe, responde 400
+        con el error en ese campo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearProductoRequest'
+            examples:
+              ejemplo:
+                summary: Medicamento
+                value:
+                  nombre: Paracetamol 500 mg
+                  categoriaProductoId: 00000000-0000-4000-8000-000000000101
+      responses:
+        '201':
+          description: Producto creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoCreadoResponse'
+              examples:
+                conRegistro:
+                  summary: 'Se aplicó una regla: registro creado en No verificado'
+                  value:
+                    producto:
+                      productoId: 00000000-0000-4000-8000-000000000201
+                      nombre: Paracetamol 500 mg
+                      categoria:
+                        id: 00000000-0000-4000-8000-000000000101
+                        nombre: Medicamento
+                      registro:
+                        registroId: 00000000-0000-4000-8000-000000000401
+                        productoId: 00000000-0000-4000-8000-000000000201
+                        tipoDocumento:
+                          tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                          codigo: REG-MED
+                          nombre: Registro de medicamento
+                          autoridadEmisora: ARSA
+                          vigenciaMeses: 60
+                        estado: NoVerificado
+                        numero: null
+                        fechaEmision: null
+                        fechaVencimiento: null
+                        diasParaVencer: null
+                        requiereVerificacion: true
+                        tieneChecklist: false
+                sinRegla:
+                  summary: 'Ninguna regla aplicó: producto sin registro ni checklist'
+                  value:
+                    producto:
+                      productoId: 00000000-0000-4000-8000-000000000203
+                      nombre: Crema hidratante facial
+                      categoria:
+                        id: 00000000-0000-4000-8000-000000000102
+                        nombre: Cosmético
+                      registro: null
+                    mensaje: No existe una regla que aplique a este producto. Se guardó sin registro sanitario ni checklist.
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      nombre:
+                      - El nombre del producto es obligatorio.
+                      categoriaProductoId:
+                      - La categoría seleccionada no existe.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /productos/{productoId}:
+    parameters:
+      - $ref: '#/components/parameters/ProductoId'
+    get:
+      tags: [Productos]
+      operationId: obtenerProducto
+      summary: Detalle de un producto con su registro (H3, H4, H8)
+      responses:
+        '200':
+          description: Producto.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoDetalle'
+              examples:
+                producto:
+                  summary: Producto con registro vigente
+                  value:
+                    productoId: 00000000-0000-4000-8000-000000000201
+                    nombre: Paracetamol 500 mg
+                    categoria:
+                      id: 00000000-0000-4000-8000-000000000101
+                      nombre: Medicamento
+                    registro:
+                      registroId: 00000000-0000-4000-8000-000000000401
+                      productoId: 00000000-0000-4000-8000-000000000201
+                      tipoDocumento:
+                        tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                        codigo: REG-MED
+                        nombre: Registro de medicamento
+                        autoridadEmisora: ARSA
+                        vigenciaMeses: 60
+                      estado: Vigente
+                      numero: RS-0001-EJ
+                      fechaEmision: '2026-10-15'
+                      fechaVencimiento: '2031-10-15'
+                      diasParaVencer: 1787
+                      requiereVerificacion: false
+                      tieneChecklist: false
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: Producto no encontrado.
+    patch:
+      tags: [Productos]
+      operationId: editarProducto
+      summary: Editar un producto (H5)
+      description: |
+        La categoría no se puede cambiar; si se envía y difiere, responde 400 con el error en
+        `categoriaProductoId`. Debe enviarse al menos un campo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditarProductoRequest'
+            examples:
+              cambiarNombre:
+                summary: Cambiar el nombre
+                value:
+                  nombre: Paracetamol 500 mg (caja x 100)
+      responses:
+        '200':
+          description: Producto actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoDetalle'
+              examples:
+                producto:
+                  summary: Producto actualizado
+                  value:
+                    productoId: 00000000-0000-4000-8000-000000000201
+                    nombre: Paracetamol 500 mg
+                    categoria:
+                      id: 00000000-0000-4000-8000-000000000101
+                      nombre: Medicamento
+                    registro:
+                      registroId: 00000000-0000-4000-8000-000000000401
+                      productoId: 00000000-0000-4000-8000-000000000201
+                      tipoDocumento:
+                        tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                        codigo: REG-MED
+                        nombre: Registro de medicamento
+                        autoridadEmisora: ARSA
+                        vigenciaMeses: 60
+                      estado: Vigente
+                      numero: RS-0001-EJ
+                      fechaEmision: '2026-10-15'
+                      fechaVencimiento: '2031-10-15'
+                      diasParaVencer: 1787
+                      requiereVerificacion: false
+                      tieneChecklist: false
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      categoriaProductoId:
+                      - La categoría de un producto no se puede cambiar.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: Producto no encontrado.
+    delete:
+      tags: [Productos]
+      operationId: darDeBajaProducto
+      summary: Dar de baja un producto (H5)
+      description: |
+        Baja lógica (el cliente debe pedir confirmación antes). El producto desaparece
+        de la lista, las alertas y el dashboard; sus datos no se borran.
+      responses:
+        '204':
+          description: Producto dado de baja.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: Producto no encontrado.
+
+  # ──────────────────────────── REGISTROS SANITARIOS ────────────────────────────
+  /productos/{productoId}/registro:
+    parameters:
+      - $ref: '#/components/parameters/ProductoId'
+    get:
+      tags: [Registros sanitarios]
+      operationId: obtenerRegistroProducto
+      summary: Registro sanitario del producto (H3, H4)
+      description: "404 si el producto no existe o está dado de baja, o si no tiene registro (ninguna regla aplicó) o fue dado de baja."
+      responses:
+        '200':
+          description: Registro sanitario.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistroSanitario'
+              examples:
+                vigente:
+                  summary: Registro vigente
+                  value:
+                    registroId: 00000000-0000-4000-8000-000000000401
+                    productoId: 00000000-0000-4000-8000-000000000201
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      codigo: REG-MED
+                      nombre: Registro de medicamento
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 60
+                    estado: Vigente
+                    numero: RS-0001-EJ
+                    fechaEmision: '2026-10-15'
+                    fechaVencimiento: '2031-10-15'
+                    diasParaVencer: 1787
+                    requiereVerificacion: false
+                    tieneChecklist: false
+                noVerificado:
+                  summary: Registro aún por verificar
+                  value:
+                    registroId: 00000000-0000-4000-8000-000000000401
+                    productoId: 00000000-0000-4000-8000-000000000201
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      codigo: REG-MED
+                      nombre: Registro de medicamento
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 60
+                    estado: NoVerificado
+                    numero: null
+                    fechaEmision: null
+                    fechaVencimiento: null
+                    diasParaVencer: null
+                    requiereVerificacion: true
+                    tieneChecklist: false
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa; o no tiene registro sanitario (ninguna regla aplicó) o fue dado de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El producto no existe o no tiene registro sanitario.
+    patch:
+      tags: [Registros sanitarios]
+      operationId: registrarEmisionRegistro
+      summary: Registrar o corregir número y emisión del registro (H5)
+      description: |
+        Se usa cuando ARSA entrega el registro (pasa de `NoVerificado`/`EnTramite`
+        a un estado calculado) o para corregir los datos. Número y fecha de emisión
+        van juntos. El vencimiento = emisión + `vigenciaMeses` del documento.
+        El número es único dentro de la empresa, **incluyendo registros dados de baja**
+        (un número dado de baja no se libera); si ya existe en otro registro, responde 409
+        con el error en `numero`. Si el registro estaba `EnTramite`, su checklist se conserva
+        como solo lectura y `tieneChecklist` sigue en `true`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmisionRequest'
+            examples:
+              emision:
+                summary: Número y emisión del registro
+                value:
+                  numero: RS-0001-EJ
+                  fechaEmision: '2026-10-15'
+      responses:
+        '200':
+          description: Registro actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistroSanitario'
+              examples:
+                vigente:
+                  summary: Registro con emisión registrada
+                  value:
+                    registroId: 00000000-0000-4000-8000-000000000401
+                    productoId: 00000000-0000-4000-8000-000000000201
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      codigo: REG-MED
+                      nombre: Registro de medicamento
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 60
+                    estado: Vigente
+                    numero: RS-0001-EJ
+                    fechaEmision: '2026-10-15'
+                    fechaVencimiento: '2031-10-15'
+                    diasParaVencer: 1787
+                    requiereVerificacion: false
+                    tieneChecklist: false
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      numero:
+                      - Número y fecha de emisión deben enviarse juntos.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa; o no tiene registro sanitario (ninguna regla aplicó) o fue dado de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El producto no existe o no tiene registro sanitario.
+        '409':
+          description: El número de registro ya existe dentro de la empresa.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                numeroDuplicado:
+                  summary: Número de registro repetido
+                  value:
+                    status: 409
+                    title: Conflicto
+                    detail: El número de registro ya existe en tu empresa.
+                    errors:
+                      numero:
+                      - El número de registro ya existe en tu empresa.
+    delete:
+      tags: [Registros sanitarios]
+      operationId: darDeBajaRegistro
+      summary: Dar de baja solo el registro del producto (H5)
+      description: |
+        Baja lógica con confirmación. El producto no se da de baja. El registro
+        desaparece de alertas, dashboard y expediente.
+      responses:
+        '204':
+          description: Registro dado de baja.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa; o no tiene registro sanitario (ninguna regla aplicó) o fue dado de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El producto no existe o no tiene registro sanitario.
+
+  /productos/{productoId}/registro/verificacion:
+    parameters:
+      - $ref: '#/components/parameters/ProductoId'
+    post:
+      tags: [Registros sanitarios]
+      operationId: verificarRegistro
+      summary: Indicar si el producto ya tiene registro (H3, H11)
+      description: |
+        Solo válido mientras el registro esté `NoVerificado` (si no, 409). Si `numero` ya existe
+        en la empresa, 409 con el error en `numero`. Si `tieneDocumento` es `true` y falta `numero`
+        o `fechaEmision`, o es `false` y se envían, 400.
+
+        Orden de validación: 404, luego 409 (estado), luego 400 (cuerpo) y por último 409
+        (número duplicado). Si llegan dos solicitudes a la vez, solo una crea el checklist
+        (hay un único checklist por registro) y la otra recibe 409.
+        - `tieneDocumento: true` → requiere `numero` y `fechaEmision`; se calcula
+          vencimiento y estado. **No** se crea checklist.
+        - `tieneDocumento: false` → pasa a `EnTramite` y se crea el checklist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificacionRequest'
+            examples:
+              yaLoTiene:
+                summary: Ya tiene el registro
+                value:
+                  tieneDocumento: true
+                  numero: RS-0001-EJ
+                  fechaEmision: '2026-10-15'
+              noLoTiene:
+                summary: Aún no lo tiene (pasa a En trámite)
+                value:
+                  tieneDocumento: false
+      responses:
+        '200':
+          description: Registro verificado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistroSanitario'
+              examples:
+                yaLoTiene:
+                  summary: 'Ya tenía el registro: estado calculado, sin checklist'
+                  value:
+                    registroId: 00000000-0000-4000-8000-000000000401
+                    productoId: 00000000-0000-4000-8000-000000000201
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      codigo: REG-MED
+                      nombre: Registro de medicamento
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 60
+                    estado: Vigente
+                    numero: RS-0001-EJ
+                    fechaEmision: '2026-10-15'
+                    fechaVencimiento: '2031-10-15'
+                    diasParaVencer: 1787
+                    requiereVerificacion: false
+                    tieneChecklist: false
+                enTramite:
+                  summary: 'No lo tenía: pasa a En trámite con checklist'
+                  value:
+                    registroId: 00000000-0000-4000-8000-000000000401
+                    productoId: 00000000-0000-4000-8000-000000000201
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      codigo: REG-MED
+                      nombre: Registro de medicamento
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 60
+                    estado: EnTramite
+                    numero: null
+                    fechaEmision: null
+                    fechaVencimiento: null
+                    diasParaVencer: null
+                    requiereVerificacion: false
+                    tieneChecklist: true
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Los datos de verificación no son válidos.
+                    errors:
+                      numero:
+                      - El número de registro es obligatorio cuando ya se tiene el documento.
+                      fechaEmision:
+                      - La fecha de emisión es obligatoria cuando ya se tiene el documento.
+                noLoTieneConDatos:
+                  summary: Sin documento pero con datos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Los datos de verificación no son válidos.
+                    errors:
+                      tieneDocumento:
+                      - No se deben enviar número ni fecha de emisión cuando aún no se tiene el documento.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa; o no tiene registro sanitario (ninguna regla aplicó) o fue dado de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El producto no existe o no tiene registro sanitario.
+        '409':
+          description: El registro ya no está `NoVerificado` o el número ya existe en la empresa.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                yaVerificado:
+                  summary: Registro ya verificado
+                  value:
+                    status: 409
+                    title: Conflicto
+                    detail: El registro ya fue verificado. Solo se puede verificar mientras está en estado No verificado.
+                numeroDuplicado:
+                  summary: Número de registro repetido
+                  value:
+                    status: 409
+                    title: Conflicto
+                    detail: El número de registro ya existe en tu empresa.
+                    errors:
+                      numero:
+                      - El número de registro ya existe en tu empresa.
+
+  # ──────────────────────────── ESTABLECIMIENTOS ────────────────────────────
+  /establecimientos:
+    get:
+      tags: [Establecimientos]
+      operationId: listarEstablecimientos
+      summary: Listar establecimientos con su licencia (H6)
+      description: Excluye los establecimientos dados de baja.
+      parameters:
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/TamanoPagina'
+      responses:
+        '200':
+          description: Página de establecimientos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablecimientoPagina'
+              examples:
+                pagina:
+                  summary: Establecimientos con su licencia
+                  value:
+                    pagina: 1
+                    tamanoPagina: 20
+                    total: 2
+                    items:
+                    - establecimientoId: 00000000-0000-4000-8000-000000000501
+                      nombre: Bodega Principal
+                      tipo:
+                        id: 00000000-0000-4000-8000-000000000112
+                        nombre: Droguería
+                      ubicacion: Tegucigalpa, Col. Palmira
+                      licencia:
+                        licenciaId: 00000000-0000-4000-8000-000000000411
+                        establecimientoId: 00000000-0000-4000-8000-000000000501
+                        tipoDocumento:
+                          tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                          codigo: LIC-DROG
+                          nombre: Licencia de droguería
+                          autoridadEmisora: ARSA
+                          vigenciaMeses: 12
+                        estado: Vigente
+                        numero: LS-0001-EJ
+                        fechaEmision: '2026-11-10'
+                        fechaVencimiento: '2027-11-10'
+                        diasParaVencer: 352
+                        requiereVerificacion: false
+                        tieneChecklist: false
+                    - establecimientoId: 00000000-0000-4000-8000-000000000502
+                      nombre: Bodega Sur
+                      tipo:
+                        id: 00000000-0000-4000-8000-000000000113
+                        nombre: Bodega
+                      ubicacion: Tegucigalpa, Col. Palmira
+                      licencia: null
+        '400':
+          description: Parámetros de consulta inválidos. `errors` indica el mensaje junto al parámetro.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      tamanoPagina:
+                      - El tamaño de página debe estar entre 1 y 100.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+    post:
+      tags: [Establecimientos]
+      operationId: crearEstablecimiento
+      summary: Registrar un establecimiento (H6, H11)
+      description: |
+        Guarda el establecimiento y, aparte, su licencia con el documento que el
+        motor elige según el tipo. La licencia queda `NoVerificado`.
+        Si ninguna regla aplica, se guarda sin licencia ni checklist y se devuelve un `mensaje`.
+        Si `tipoEstablecimientoId` no existe, responde 400 con el error en ese campo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearEstablecimientoRequest'
+            examples:
+              ejemplo:
+                summary: Droguería
+                value:
+                  nombre: Bodega Principal
+                  tipoEstablecimientoId: 00000000-0000-4000-8000-000000000112
+                  ubicacion: Tegucigalpa, Col. Palmira
+      responses:
+        '201':
+          description: Establecimiento creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablecimientoCreadoResponse'
+              examples:
+                conLicencia:
+                  summary: 'Se aplicó una regla: licencia creada en No verificado'
+                  value:
+                    establecimiento:
+                      establecimientoId: 00000000-0000-4000-8000-000000000501
+                      nombre: Bodega Principal
+                      tipo:
+                        id: 00000000-0000-4000-8000-000000000112
+                        nombre: Droguería
+                      ubicacion: Tegucigalpa, Col. Palmira
+                      licencia:
+                        licenciaId: 00000000-0000-4000-8000-000000000411
+                        establecimientoId: 00000000-0000-4000-8000-000000000501
+                        tipoDocumento:
+                          tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                          codigo: LIC-DROG
+                          nombre: Licencia de droguería
+                          autoridadEmisora: ARSA
+                          vigenciaMeses: 12
+                        estado: NoVerificado
+                        numero: null
+                        fechaEmision: null
+                        fechaVencimiento: null
+                        diasParaVencer: null
+                        requiereVerificacion: true
+                        tieneChecklist: false
+                sinRegla:
+                  summary: 'Ninguna regla aplicó: establecimiento sin licencia ni checklist'
+                  value:
+                    establecimiento:
+                      establecimientoId: 00000000-0000-4000-8000-000000000502
+                      nombre: Bodega Sur
+                      tipo:
+                        id: 00000000-0000-4000-8000-000000000113
+                        nombre: Bodega
+                      ubicacion: Tegucigalpa, Col. Palmira
+                      licencia: null
+                    mensaje: No existe una regla que aplique a este establecimiento. Se guardó sin licencia sanitaria ni checklist.
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      nombre:
+                      - El nombre del establecimiento es obligatorio.
+                      tipoEstablecimientoId:
+                      - El tipo de establecimiento no existe.
+                      ubicacion:
+                      - La ubicación es obligatoria.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /establecimientos/{establecimientoId}:
+    parameters:
+      - $ref: '#/components/parameters/EstablecimientoId'
+    get:
+      tags: [Establecimientos]
+      operationId: obtenerEstablecimiento
+      summary: Detalle de un establecimiento con su licencia (H6)
+      responses:
+        '200':
+          description: Establecimiento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstablecimientoDetalle'
+              examples:
+                establecimiento:
+                  summary: Establecimiento con licencia vigente
+                  value:
+                    establecimientoId: 00000000-0000-4000-8000-000000000501
+                    nombre: Bodega Principal
+                    tipo:
+                      id: 00000000-0000-4000-8000-000000000112
+                      nombre: Droguería
+                    ubicacion: Tegucigalpa, Col. Palmira
+                    licencia:
+                      licenciaId: 00000000-0000-4000-8000-000000000411
+                      establecimientoId: 00000000-0000-4000-8000-000000000501
+                      tipoDocumento:
+                        tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                        codigo: LIC-DROG
+                        nombre: Licencia de droguería
+                        autoridadEmisora: ARSA
+                        vigenciaMeses: 12
+                      estado: Vigente
+                      numero: LS-0001-EJ
+                      fechaEmision: '2026-11-10'
+                      fechaVencimiento: '2027-11-10'
+                      diasParaVencer: 352
+                      requiereVerificacion: false
+                      tieneChecklist: false
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El establecimiento no existe, está dado de baja o es de otra empresa.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: Establecimiento no encontrado.
+    delete:
+      tags: [Establecimientos]
+      operationId: darDeBajaEstablecimiento
+      summary: Dar de baja un establecimiento (H6)
+      description: |
+        Baja lógica (el cliente debe pedir confirmación antes). También da de baja su
+        licencia sanitaria y su checklist. Desaparece de listas, alertas y dashboard;
+        sus datos no se borran.
+      responses:
+        '204':
+          description: Establecimiento dado de baja.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El establecimiento no existe, está dado de baja o es de otra empresa.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: Establecimiento no encontrado.
+
+  # ──────────────────────────── LICENCIAS ────────────────────────────
+  /licencias:
+    get:
+      tags: [Licencias sanitarias]
+      operationId: listarLicencias
+      summary: Listar licencias con su semáforo y filtrar por estado (H7)
+      description: Cada licencia indica el establecimiento al que pertenece. Excluye lo dado de baja.
+      parameters:
+        - $ref: '#/components/parameters/EstadoFiltro'
+        - $ref: '#/components/parameters/Pagina'
+        - $ref: '#/components/parameters/TamanoPagina'
+      responses:
+        '200':
+          description: Página de licencias.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenciaPagina'
+              examples:
+                pagina:
+                  summary: Licencias con su estado
+                  value:
+                    pagina: 1
+                    tamanoPagina: 20
+                    total: 1
+                    items:
+                    - licenciaId: 00000000-0000-4000-8000-000000000411
+                      establecimiento:
+                        establecimientoId: 00000000-0000-4000-8000-000000000501
+                        nombre: Bodega Principal
+                      tipoDocumento:
+                        tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                        codigo: LIC-DROG
+                        nombre: Licencia de droguería
+                        autoridadEmisora: ARSA
+                        vigenciaMeses: 12
+                      estado: Vigente
+                      numero: LS-0001-EJ
+                      fechaEmision: '2026-11-10'
+                      fechaVencimiento: '2027-11-10'
+                      diasParaVencer: 352
+                      requiereVerificacion: false
+                      tieneChecklist: false
+        '400':
+          description: Parámetros de consulta inválidos. `errors` indica el mensaje junto al parámetro.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      estado:
+                      - 'El estado no es válido. Valores permitidos: NoVerificado, EnTramite, Vigente, PorVencer, Vencido.'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /establecimientos/{establecimientoId}/licencia:
+    parameters:
+      - $ref: '#/components/parameters/EstablecimientoId'
+    get:
+      tags: [Licencias sanitarias]
+      operationId: obtenerLicenciaEstablecimiento
+      summary: Licencia sanitaria del establecimiento (H6, H7)
+      responses:
+        '200':
+          description: Licencia.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenciaSanitaria'
+              examples:
+                vigente:
+                  summary: Licencia vigente
+                  value:
+                    licenciaId: 00000000-0000-4000-8000-000000000411
+                    establecimientoId: 00000000-0000-4000-8000-000000000501
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      codigo: LIC-DROG
+                      nombre: Licencia de droguería
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 12
+                    estado: Vigente
+                    numero: LS-0001-EJ
+                    fechaEmision: '2026-11-10'
+                    fechaVencimiento: '2027-11-10'
+                    diasParaVencer: 352
+                    requiereVerificacion: false
+                    tieneChecklist: false
+                enTramite:
+                  summary: Licencia en trámite
+                  value:
+                    licenciaId: 00000000-0000-4000-8000-000000000411
+                    establecimientoId: 00000000-0000-4000-8000-000000000501
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      codigo: LIC-DROG
+                      nombre: Licencia de droguería
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 12
+                    estado: EnTramite
+                    numero: null
+                    fechaEmision: null
+                    fechaVencimiento: null
+                    diasParaVencer: null
+                    requiereVerificacion: false
+                    tieneChecklist: true
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El establecimiento no existe, está dado de baja o es de otra empresa; o no tiene licencia sanitaria (ninguna regla aplicó) o fue dada de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El establecimiento no existe o no tiene licencia sanitaria.
+    patch:
+      tags: [Licencias sanitarias]
+      operationId: registrarEmisionLicencia
+      summary: Registrar número y emisión cuando ARSA emite la licencia (H6)
+      description: |
+        Número y fecha de emisión van juntos. Calcula vencimiento y estado. Aplica desde
+        `NoVerificado` o `EnTramite` (igual que el registro) y también sirve para corregir los
+        datos. Al registrar la emisión, la licencia sale de `EnTramite` y se desbloquean los
+        documentos que dependen de ella (si la licencia queda emitida y no vencida). Si estaba
+        `EnTramite`, su checklist se conserva como solo lectura y `tieneChecklist` sigue en `true`.
+        El número de licencia no se valida como único (a diferencia del registro), por eso no hay 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmisionRequest'
+            examples:
+              emision:
+                summary: Número y emisión de la licencia
+                value:
+                  numero: LS-0001-EJ
+                  fechaEmision: '2026-11-10'
+      responses:
+        '200':
+          description: Licencia actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenciaSanitaria'
+              examples:
+                vigente:
+                  summary: Licencia con emisión registrada
+                  value:
+                    licenciaId: 00000000-0000-4000-8000-000000000411
+                    establecimientoId: 00000000-0000-4000-8000-000000000501
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      codigo: LIC-DROG
+                      nombre: Licencia de droguería
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 12
+                    estado: Vigente
+                    numero: LS-0001-EJ
+                    fechaEmision: '2026-11-10'
+                    fechaVencimiento: '2027-11-10'
+                    diasParaVencer: 352
+                    requiereVerificacion: false
+                    tieneChecklist: false
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      numero:
+                      - Número y fecha de emisión deben enviarse juntos.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El establecimiento no existe, está dado de baja o es de otra empresa; o no tiene licencia sanitaria (ninguna regla aplicó) o fue dada de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El establecimiento no existe o no tiene licencia sanitaria.
+    delete:
+      tags: [Licencias sanitarias]
+      operationId: darDeBajaLicencia
+      summary: Dar de baja solo la licencia del establecimiento (H6)
+      description: |
+        Baja lógica con confirmación. El establecimiento no se da de baja. La licencia
+        desaparece de la lista de licencias, alertas, dashboard y checklist.
+      responses:
+        '204':
+          description: Licencia dada de baja.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El establecimiento no existe, está dado de baja o es de otra empresa; o no tiene licencia sanitaria (ninguna regla aplicó) o fue dada de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El establecimiento no existe o no tiene licencia sanitaria.
+
+  /establecimientos/{establecimientoId}/licencia/verificacion:
+    parameters:
+      - $ref: '#/components/parameters/EstablecimientoId'
+    post:
+      tags: [Licencias sanitarias]
+      operationId: verificarLicencia
+      summary: Indicar si el establecimiento ya tiene licencia (H6, H11)
+      description: |
+        Solo válido mientras la licencia esté `NoVerificado` (si no, 409). Si `tieneDocumento` es
+        `true` y falta `numero` o `fechaEmision`, o es `false` y se envían, 400.
+
+        Orden de validación: 404, luego 409 (estado) y por último 400 (cuerpo). Si llegan dos
+        solicitudes a la vez, solo una crea el checklist (hay un único checklist por licencia)
+        y la otra recibe 409.
+        - `tieneDocumento: true` → requiere `numero` y `fechaEmision`; se calcula vencimiento
+          y estado. **No** se crea checklist.
+        - `tieneDocumento: false` → pasa a `EnTramite` y se crea el checklist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificacionRequest'
+            examples:
+              yaLaTiene:
+                summary: Ya tiene la licencia
+                value:
+                  tieneDocumento: true
+                  numero: LS-0001-EJ
+                  fechaEmision: '2026-11-10'
+              noLaTiene:
+                summary: Aún no la tiene (pasa a En trámite)
+                value:
+                  tieneDocumento: false
+      responses:
+        '200':
+          description: Licencia verificada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenciaSanitaria'
+              examples:
+                yaLaTiene:
+                  summary: 'Ya tenía la licencia: estado calculado, sin checklist'
+                  value:
+                    licenciaId: 00000000-0000-4000-8000-000000000411
+                    establecimientoId: 00000000-0000-4000-8000-000000000501
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      codigo: LIC-DROG
+                      nombre: Licencia de droguería
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 12
+                    estado: Vigente
+                    numero: LS-0001-EJ
+                    fechaEmision: '2026-11-10'
+                    fechaVencimiento: '2027-11-10'
+                    diasParaVencer: 352
+                    requiereVerificacion: false
+                    tieneChecklist: false
+                enTramite:
+                  summary: 'No la tenía: pasa a En trámite con checklist'
+                  value:
+                    licenciaId: 00000000-0000-4000-8000-000000000411
+                    establecimientoId: 00000000-0000-4000-8000-000000000501
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      codigo: LIC-DROG
+                      nombre: Licencia de droguería
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 12
+                    estado: EnTramite
+                    numero: null
+                    fechaEmision: null
+                    fechaVencimiento: null
+                    diasParaVencer: null
+                    requiereVerificacion: false
+                    tieneChecklist: true
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalido:
+                  summary: Campos inválidos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Los datos de verificación no son válidos.
+                    errors:
+                      numero:
+                      - El número de licencia es obligatorio cuando ya se tiene el documento.
+                      fechaEmision:
+                      - La fecha de emisión es obligatoria cuando ya se tiene el documento.
+                noLaTieneConDatos:
+                  summary: Sin documento pero con datos
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Los datos de verificación no son válidos.
+                    errors:
+                      tieneDocumento:
+                      - No se deben enviar número ni fecha de emisión cuando aún no se tiene el documento.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El establecimiento no existe, está dado de baja o es de otra empresa; o no tiene licencia sanitaria (ninguna regla aplicó) o fue dada de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El establecimiento no existe o no tiene licencia sanitaria.
+        '409':
+          description: La licencia ya no está `NoVerificado`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                yaVerificada:
+                  summary: Licencia ya verificada
+                  value:
+                    status: 409
+                    title: Conflicto
+                    detail: La licencia ya fue verificada. Solo se puede verificar mientras está en estado No verificado.
+
+  # ──────────────────────────── CHECKLIST ────────────────────────────
+  /productos/{productoId}/registro/checklist:
+    parameters:
+      - $ref: '#/components/parameters/ProductoId'
+    get:
+      tags: [Checklist]
+      operationId: obtenerChecklistRegistro
+      summary: Checklist del registro de un producto (H11)
+      description: |
+        Devuelve el documento asignado, sus requisitos con estado y tipo, el avance
+        ("3 de 6") y el bloqueo calculado. 404 si el producto o su registro no existen, están
+        dados de baja o el registro no tiene checklist (`tieneChecklist: false`).
+      responses:
+        '200':
+          description: Checklist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checklist'
+              examples:
+                bloqueado:
+                  summary: Checklist del registro, bloqueado por una licencia faltante
+                  value:
+                    origen: Registro
+                    origenId: 00000000-0000-4000-8000-000000000401
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      codigo: REG-MED
+                      nombre: Registro de medicamento
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 60
+                    avance:
+                      cumplidos: 1
+                      total: 6
+                      porcentaje: 16.7
+                    bloqueo:
+                      bloqueado: true
+                      faltantes:
+                      - tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                        codigo: LIC-DROG
+                        nombre: Licencia de droguería
+                        autoridadEmisora: ARSA
+                        vigenciaMeses: 12
+                    requisitos:
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000601
+                      requisitoId: 00000000-0000-4000-8000-000000000701
+                      descripcion: Solicitud
+                      tipoRequisito: Documento
+                      obligatorio: true
+                      orden: 1
+                      estado: Cumplido
+                      responsable:
+                        usuarioId: 00000000-0000-4000-8000-000000000001
+                        nombre: María López
+                      fechaLimite: null
+                      fechaCumplimiento: '2026-11-23T15:30:00Z'
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000602
+                      requisitoId: 00000000-0000-4000-8000-000000000702
+                      descripcion: Declaración jurada
+                      tipoRequisito: Documento
+                      obligatorio: true
+                      orden: 2
+                      estado: Pendiente
+                      responsable: null
+                      fechaLimite: null
+                      fechaCumplimiento: null
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000603
+                      requisitoId: 00000000-0000-4000-8000-000000000703
+                      descripcion: Ficha técnica
+                      tipoRequisito: Documento
+                      obligatorio: true
+                      orden: 3
+                      estado: Pendiente
+                      responsable: null
+                      fechaLimite: null
+                      fechaCumplimiento: null
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000604
+                      requisitoId: 00000000-0000-4000-8000-000000000704
+                      descripcion: Certificado de buenas prácticas de manufactura
+                      tipoRequisito: Documento
+                      obligatorio: true
+                      orden: 4
+                      estado: Pendiente
+                      responsable: null
+                      fechaLimite: null
+                      fechaCumplimiento: null
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000605
+                      requisitoId: 00000000-0000-4000-8000-000000000705
+                      descripcion: Etiqueta
+                      tipoRequisito: Documento
+                      obligatorio: true
+                      orden: 5
+                      estado: Pendiente
+                      responsable: null
+                      fechaLimite: null
+                      fechaCumplimiento: null
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000606
+                      requisitoId: 00000000-0000-4000-8000-000000000706
+                      descripcion: Pago de tasa
+                      tipoRequisito: Accion
+                      obligatorio: true
+                      orden: 6
+                      estado: Pendiente
+                      responsable: null
+                      fechaLimite: null
+                      fechaCumplimiento: null
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa; o su registro no existe, fue dado de baja o no tiene checklist.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: El registro sanitario del producto no tiene checklist.
+
+  /establecimientos/{establecimientoId}/licencia/checklist:
+    parameters:
+      - $ref: '#/components/parameters/EstablecimientoId'
+    get:
+      tags: [Checklist]
+      operationId: obtenerChecklistLicencia
+      summary: Checklist de la licencia de un establecimiento (H11)
+      description: "404 si el establecimiento o su licencia no existen, están dados de baja o la licencia no tiene checklist (`tieneChecklist: false`)."
+      responses:
+        '200':
+          description: Checklist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checklist'
+              examples:
+                enCurso:
+                  summary: Checklist de la licencia, 3 de 5 cumplidos
+                  value:
+                    origen: Licencia
+                    origenId: 00000000-0000-4000-8000-000000000411
+                    tipoDocumento:
+                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      codigo: LIC-DROG
+                      nombre: Licencia de droguería
+                      autoridadEmisora: ARSA
+                      vigenciaMeses: 12
+                    avance:
+                      cumplidos: 3
+                      total: 5
+                      porcentaje: 60
+                    bloqueo:
+                      bloqueado: false
+                      faltantes: []
+                    requisitos:
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000611
+                      requisitoId: 00000000-0000-4000-8000-000000000721
+                      descripcion: Solicitud
+                      tipoRequisito: Documento
+                      obligatorio: true
+                      orden: 1
+                      estado: Cumplido
+                      responsable:
+                        usuarioId: 00000000-0000-4000-8000-000000000001
+                        nombre: María López
+                      fechaLimite: null
+                      fechaCumplimiento: '2026-11-23T15:30:00Z'
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000612
+                      requisitoId: 00000000-0000-4000-8000-000000000722
+                      descripcion: Declaración jurada
+                      tipoRequisito: Documento
+                      obligatorio: true
+                      orden: 2
+                      estado: Cumplido
+                      responsable:
+                        usuarioId: 00000000-0000-4000-8000-000000000001
+                        nombre: María López
+                      fechaLimite: null
+                      fechaCumplimiento: '2026-11-23T15:30:00Z'
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000613
+                      requisitoId: 00000000-0000-4000-8000-000000000723
+                      descripcion: Planos del local
+                      tipoRequisito: Documento
+                      obligatorio: true
+                      orden: 3
+                      estado: Cumplido
+                      responsable:
+                        usuarioId: 00000000-0000-4000-8000-000000000001
+                        nombre: María López
+                      fechaLimite: null
+                      fechaCumplimiento: '2026-11-23T15:30:00Z'
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000614
+                      requisitoId: 00000000-0000-4000-8000-000000000724
+                      descripcion: Regente farmacéutico
+                      tipoRequisito: Dato
+                      obligatorio: true
+                      orden: 4
+                      estado: Pendiente
+                      responsable: null
+                      fechaLimite: null
+                      fechaCumplimiento: null
+                    - checklistRequisitoId: 00000000-0000-4000-8000-000000000615
+                      requisitoId: 00000000-0000-4000-8000-000000000725
+                      descripcion: Pago de tasa
+                      tipoRequisito: Accion
+                      obligatorio: true
+                      orden: 5
+                      estado: Pendiente
+                      responsable: null
+                      fechaLimite: null
+                      fechaCumplimiento: null
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El establecimiento no existe o es de otra empresa; o su licencia no existe, fue dada de baja o no tiene checklist.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: La licencia sanitaria del establecimiento no tiene checklist.
+
+  /checklist-requisitos/{checklistRequisitoId}:
+    parameters:
+      - $ref: '#/components/parameters/ChecklistRequisitoId'
+    patch:
+      tags: [Checklist]
+      operationId: actualizarRequisitoChecklist
+      summary: Marcar cumplido, devolver a pendiente, asignar responsable o fecha límite (H11)
+      description: |
+        - Al pasar a `Cumplido` se guarda `fechaCumplimiento` y el responsable pasa a ser
+          quien lo completó.
+        - Al volver a `Pendiente` se borra `fechaCumplimiento`.
+        - En el MVP el único responsable posible es el usuario de la empresa.
+        - Debe enviarse al menos un campo; solo se modifican los enviados.
+        - 400 si `responsableUsuarioId` no es un usuario de la empresa.
+        - 404 si el checklist es de un registro o licencia dados de baja.
+        - 409 si el registro o la licencia ya no está `EnTramite` (el checklist queda de solo lectura).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarRequisitoRequest'
+            examples:
+              marcarCumplido:
+                summary: Marcar como cumplido
+                value:
+                  estado: Cumplido
+              devolverAPendiente:
+                summary: Devolver a pendiente
+                value:
+                  estado: Pendiente
+              asignarFechaLimite:
+                summary: Asignar fecha límite
+                value:
+                  fechaLimite: '2026-12-15'
+      responses:
+        '200':
+          description: Requisito actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequisitoChecklist'
+              examples:
+                cumplido:
+                  summary: Requisito marcado como cumplido
+                  value:
+                    checklistRequisitoId: 00000000-0000-4000-8000-000000000601
+                    requisitoId: 00000000-0000-4000-8000-000000000701
+                    descripcion: Solicitud
+                    tipoRequisito: Documento
+                    obligatorio: true
+                    orden: 1
+                    estado: Cumplido
+                    responsable:
+                      usuarioId: 00000000-0000-4000-8000-000000000001
+                      nombre: María López
+                    fechaLimite: '2026-12-15'
+                    fechaCumplimiento: '2026-11-23T15:30:00Z'
+        '400':
+          description: Datos inválidos. `errors` indica el mensaje junto al campo que corresponde.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                responsableInvalido:
+                  summary: Responsable que no es de la empresa
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      responsableUsuarioId:
+                      - El responsable debe ser un usuario de tu empresa.
+                estadoInvalido:
+                  summary: Estado inválido
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Uno o más campos no son válidos.
+                    errors:
+                      estado:
+                      - El estado debe ser Pendiente o Cumplido.
+                sinCampos:
+                  summary: Cuerpo vacío
+                  value:
+                    status: 400
+                    title: Datos inválidos
+                    detail: Debe enviarse al menos un campo.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El requisito no existe, es de otra empresa o pertenece a un registro o licencia dados de baja.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: Requisito del checklist no encontrado.
+        '409':
+          description: El registro o la licencia ya no está `EnTramite`; el checklist es de solo lectura.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                soloLectura:
+                  summary: Checklist de solo lectura
+                  value:
+                    status: 409
+                    title: Conflicto
+                    detail: El documento ya fue emitido; el checklist es de solo lectura.
+
+  # ──────────────────────────── ALERTAS ────────────────────────────
+  /alertas:
+    get:
+      tags: [Alertas]
+      operationId: listarAlertas
+      summary: Alertas de vencimiento agrupadas (H8)
+      description: |
+        Grupos: `vencidos`, `hasta30Dias` (incluye hoy), `de31a60Dias` y `de61a90Dias`.
+        Cada elemento aparece en un solo grupo, ordenado por vencimiento (más cercano primero).
+        `NoVerificado`, `EnTramite` y lo dado de baja no generan alertas.
+      responses:
+        '200':
+          description: Alertas agrupadas. Si no hay, todos los grupos vienen vacíos y `total` es 0.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertasResponse'
+              examples:
+                conAlertas:
+                  summary: Alertas agrupadas por rango
+                  value:
+                    fechaReferencia: '2026-11-23'
+                    total: 3
+                    vencidos:
+                    - tipo: Producto
+                      productoId: 00000000-0000-4000-8000-000000000204
+                      nombre: Amoxicilina 500 mg
+                      numero: RS-0002-EJ
+                      fechaVencimiento: '2026-11-01'
+                      diasParaVencer: -22
+                      estado: Vencido
+                    hasta30Dias:
+                    - tipo: Licencia
+                      establecimientoId: 00000000-0000-4000-8000-000000000503
+                      nombre: Farmacia Central
+                      numero: LS-0002-EJ
+                      fechaVencimiento: '2026-12-10'
+                      diasParaVencer: 17
+                      estado: PorVencer
+                    de31a60Dias: []
+                    de61a90Dias:
+                    - tipo: Producto
+                      productoId: 00000000-0000-4000-8000-000000000205
+                      nombre: Loratadina 10 mg
+                      numero: RS-0003-EJ
+                      fechaVencimiento: '2027-02-10'
+                      diasParaVencer: 79
+                      estado: PorVencer
+                sinAlertas:
+                  summary: Sin alertas
+                  value:
+                    fechaReferencia: '2026-11-23'
+                    total: 0
+                    vencidos: []
+                    hasta30Dias: []
+                    de31a60Dias: []
+                    de61a90Dias: []
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  # ──────────────────────────── EXPEDIENTE ────────────────────────────
+  /productos/{productoId}/expediente:
+    get:
+      tags: [Expediente]
+      operationId: obtenerExpedienteProducto
+      summary: Expediente de un producto (H9)
+      description: |
+        Datos del producto, registro sanitario (o su estado `NoVerificado`/`EnTramite`),
+        vigencia y estado. Si el registro tiene checklist, incluye avance y aviso de bloqueo.
+        Un producto de otra empresa o dado de baja responde 404; un registro dado de baja
+        no aparece. La hoja imprimible la arma el cliente (CSS de impresión).
+      parameters:
+        - $ref: '#/components/parameters/ProductoId'
+      responses:
+        '200':
+          description: Expediente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expediente'
+              examples:
+                enTramite:
+                  summary: Expediente de un producto con registro en trámite
+                  value:
+                    generadoEn: '2026-11-23T15:30:00Z'
+                    empresa:
+                      nombre: Distribuidora FarmaCentro S.A.
+                    producto:
+                      productoId: 00000000-0000-4000-8000-000000000201
+                      nombre: Paracetamol 500 mg
+                      categoria:
+                        id: 00000000-0000-4000-8000-000000000101
+                        nombre: Medicamento
+                    registro:
+                      registroId: 00000000-0000-4000-8000-000000000401
+                      productoId: 00000000-0000-4000-8000-000000000201
+                      tipoDocumento:
+                        tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                        codigo: REG-MED
+                        nombre: Registro de medicamento
+                        autoridadEmisora: ARSA
+                        vigenciaMeses: 60
+                      estado: EnTramite
+                      numero: null
+                      fechaEmision: null
+                      fechaVencimiento: null
+                      diasParaVencer: null
+                      requiereVerificacion: false
+                      tieneChecklist: true
+                    checklist:
+                      origen: Registro
+                      origenId: 00000000-0000-4000-8000-000000000401
+                      tipoDocumento:
+                        tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                        codigo: REG-MED
+                        nombre: Registro de medicamento
+                        autoridadEmisora: ARSA
+                        vigenciaMeses: 60
+                      avance:
+                        cumplidos: 1
+                        total: 6
+                        porcentaje: 16.7
+                      bloqueo:
+                        bloqueado: true
+                        faltantes:
+                        - tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                          codigo: LIC-DROG
+                          nombre: Licencia de droguería
+                          autoridadEmisora: ARSA
+                          vigenciaMeses: 12
+                      requisitos:
+                      - checklistRequisitoId: 00000000-0000-4000-8000-000000000601
+                        requisitoId: 00000000-0000-4000-8000-000000000701
+                        descripcion: Solicitud
+                        tipoRequisito: Documento
+                        obligatorio: true
+                        orden: 1
+                        estado: Cumplido
+                        responsable:
+                          usuarioId: 00000000-0000-4000-8000-000000000001
+                          nombre: María López
+                        fechaLimite: null
+                        fechaCumplimiento: '2026-11-23T15:30:00Z'
+                      - checklistRequisitoId: 00000000-0000-4000-8000-000000000602
+                        requisitoId: 00000000-0000-4000-8000-000000000702
+                        descripcion: Declaración jurada
+                        tipoRequisito: Documento
+                        obligatorio: true
+                        orden: 2
+                        estado: Pendiente
+                        responsable: null
+                        fechaLimite: null
+                        fechaCumplimiento: null
+                      - checklistRequisitoId: 00000000-0000-4000-8000-000000000603
+                        requisitoId: 00000000-0000-4000-8000-000000000703
+                        descripcion: Ficha técnica
+                        tipoRequisito: Documento
+                        obligatorio: true
+                        orden: 3
+                        estado: Pendiente
+                        responsable: null
+                        fechaLimite: null
+                        fechaCumplimiento: null
+                      - checklistRequisitoId: 00000000-0000-4000-8000-000000000604
+                        requisitoId: 00000000-0000-4000-8000-000000000704
+                        descripcion: Certificado de buenas prácticas de manufactura
+                        tipoRequisito: Documento
+                        obligatorio: true
+                        orden: 4
+                        estado: Pendiente
+                        responsable: null
+                        fechaLimite: null
+                        fechaCumplimiento: null
+                      - checklistRequisitoId: 00000000-0000-4000-8000-000000000605
+                        requisitoId: 00000000-0000-4000-8000-000000000705
+                        descripcion: Etiqueta
+                        tipoRequisito: Documento
+                        obligatorio: true
+                        orden: 5
+                        estado: Pendiente
+                        responsable: null
+                        fechaLimite: null
+                        fechaCumplimiento: null
+                      - checklistRequisitoId: 00000000-0000-4000-8000-000000000606
+                        requisitoId: 00000000-0000-4000-8000-000000000706
+                        descripcion: Pago de tasa
+                        tipoRequisito: Accion
+                        obligatorio: true
+                        orden: 6
+                        estado: Pendiente
+                        responsable: null
+                        fechaLimite: null
+                        fechaCumplimiento: null
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          description: El producto no existe, está dado de baja o es de otra empresa.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                noEncontrado:
+                  summary: No encontrado
+                  value:
+                    status: 404
+                    title: No encontrado
+                    detail: Producto no encontrado.
+
+  # ──────────────────────────── DASHBOARD ────────────────────────────
+  /dashboard/resumen:
+    get:
+      tags: [Dashboard]
+      operationId: obtenerResumenDashboard
+      summary: Totales de productos y licencias por estado (H10)
+      description: |
+        Diez totales (productos y licencias × 5 estados). Coinciden con las listas
+        de H4 y H7; solo cuenta datos de la empresa y excluye lo dado de baja.
+      responses:
+        '200':
+          description: Resumen de riesgo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResumen'
+              examples:
+                resumen:
+                  summary: Totales por estado
+                  value:
+                    fechaReferencia: '2026-11-23'
+                    productos:
+                      noVerificado: 1
+                      enTramite: 2
+                      vigente: 5
+                      porVencer: 1
+                      vencido: 1
+                    licencias:
+                      noVerificado: 0
+                      enTramite: 1
+                      vigente: 2
+                      porVencer: 1
+                      vencido: 0
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+# ════════════════════════════ COMPONENTES ════════════════════════════
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token de corta duración. Incluye `usuarioId` y `empresaId`.
+
+  parameters:
+    ProductoId:
+      name: productoId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    EstablecimientoId:
+      name: establecimientoId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ChecklistRequisitoId:
+      name: checklistRequisitoId
+      in: path
+      required: true
+      description: Identificador del ítem del checklist (no del checklist completo).
+      schema: { type: string, format: uuid }
+    EstadoFiltro:
+      name: estado
+      in: query
+      description: Filtra por estado de vencimiento.
+      schema:
+        $ref: '#/components/schemas/EstadoVencimiento'
+    Pagina:
+      name: pagina
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    TamanoPagina:
+      name: tamanoPagina
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  responses:
+    NoAutenticado:
+      description: Sin sesión activa o token inválido. El cliente redirige al login (o intenta `/auth/refresh`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            sinSesion:
+              summary: Sin sesión o token vencido
+              value:
+                status: 401
+                title: No autenticado
+                detail: Sin sesión activa o el access token venció. Renueva con /auth/refresh o inicia sesión.
+
+  schemas:
+    # ───────── Comunes ─────────
+    EstadoVencimiento:
+      type: string
+      enum: [NoVerificado, EnTramite, Vigente, PorVencer, Vencido]
+      description: |
+        - `NoVerificado`: aún no se indicó si se tiene el documento.
+        - `EnTramite`: se indicó que no se tiene; sin fechas.
+        - `Vencido`: ya venció.
+        - `PorVencer`: vence hoy o en los próximos 90 días.
+        - `Vigente`: vence en más de 90 días.
+
+    CatalogoItem:
+      type: object
+      required: [id, nombre]
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string }
+
+    EstadoCatalogoItem:
+      type: object
+      description: Estado de vencimiento para filtros y semáforo.
+      required: [codigo, nombre]
+      properties:
+        codigo:
+          $ref: '#/components/schemas/EstadoVencimiento'
+        nombre:
+          type: string
+          description: Texto para mostrar (por ejemplo, "Por vencer").
+
+    ProblemDetails:
+      type: object
+      description: Formato RFC 7807 con errores por campo.
+      required: [status, title]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors:
+          type: object
+          description: Mapa campo → mensajes.
+          additionalProperties:
+            type: array
+            items: { type: string }
+
+    # ───────── Autenticación ─────────
+    RegistroEmpresaRequest:
+      type: object
+      required: [nombreEmpresa, nombre, correo, password]
+      properties:
+        nombreEmpresa: { type: string, maxLength: 200, example: Distribuidora FarmaCentro S.A. }
+        nombre: { type: string, maxLength: 150, example: María López }
+        correo: { type: string, format: email, maxLength: 254, example: maria@farmacentro.example }
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          description: Entre 8 y 128 caracteres.
+
+    LoginRequest:
+      type: object
+      required: [correo, password]
+      properties:
+        correo: { type: string, format: email, maxLength: 254 }
+        password: { type: string, format: password, maxLength: 128 }
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+
+    TokensResponse:
+      type: object
+      required: [accessToken, refreshToken, expiraEn]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiraEn:
+          type: string
+          format: date-time
+          description: Vencimiento del access token.
+
+    UsuarioActual:
+      type: object
+      required: [usuarioId, nombre, correo, empresa]
+      properties:
+        usuarioId: { type: string, format: uuid }
+        nombre: { type: string }
+        correo: { type: string, format: email }
+        empresa:
+          type: object
+          required: [empresaId, nombre]
+          properties:
+            empresaId: { type: string, format: uuid }
+            nombre: { type: string }
+
+    SesionResponse:
+      type: object
+      required: [tokens, usuario]
+      properties:
+        tokens:
+          $ref: '#/components/schemas/TokensResponse'
+        usuario:
+          $ref: '#/components/schemas/UsuarioActual'
+
+    # ───────── Documento (base de conocimiento) ─────────
+    TipoDocumentoResumen:
+      type: object
+      description: Documento que el motor asignó a un registro o licencia.
+      required: [tipoDocumentoId, codigo, nombre, vigenciaMeses]
+      properties:
+        tipoDocumentoId: { type: string, format: uuid }
+        codigo: { type: string }
+        nombre: { type: string }
+        autoridadEmisora: { type: string, example: ARSA }
+        baseLegal: { type: string }
+        vigenciaMeses: { type: integer }
+
+    # ───────── Verificación / emisión ─────────
+    EmisionRequest:
+      type: object
+      required: [numero, fechaEmision]
+      description: Número y fecha de emisión siempre van juntos.
+      properties:
+        numero: { type: string, maxLength: 100 }
+        fechaEmision: { type: string, format: date }
+
+    VerificacionRequest:
+      type: object
+      required: [tieneDocumento]
+      description: "Si `tieneDocumento` es `true`, `numero` y `fechaEmision` son obligatorios; si es `false`, no deben enviarse."
+      properties:
+        tieneDocumento:
+          type: boolean
+          description: "`true`: ya lo tengo (requiere numero y fechaEmision). `false`: pasa a En trámite y se crea el checklist."
+        numero: { type: string, maxLength: 100 }
+        fechaEmision: { type: string, format: date }
+
+    # ───────── Registro sanitario ─────────
+    RegistroSanitario:
+      type: object
+      required: [registroId, productoId, tipoDocumento, estado, numero, fechaEmision, fechaVencimiento, diasParaVencer, requiereVerificacion, tieneChecklist]
+      properties:
+        registroId: { type: string, format: uuid }
+        productoId: { type: string, format: uuid }
+        tipoDocumento:
+          $ref: '#/components/schemas/TipoDocumentoResumen'
+        estado:
+          $ref: '#/components/schemas/EstadoVencimiento'
+        numero: { type: string, nullable: true }
+        fechaEmision: { type: string, format: date, nullable: true }
+        fechaVencimiento: { type: string, format: date, nullable: true }
+        diasParaVencer:
+          type: integer
+          nullable: true
+          description: Negativo si ya venció. Nulo si no hay fechas.
+        requiereVerificacion:
+          type: boolean
+          description: "`true` mientras el estado sea `NoVerificado` (la UI debe preguntar si ya lo tiene)."
+        tieneChecklist: { type: boolean }
+
+    # ───────── Producto ─────────
+    CrearProductoRequest:
+      type: object
+      required: [nombre, categoriaProductoId]
+      properties:
+        nombre: { type: string, maxLength: 200, example: Paracetamol 500 mg }
+        categoriaProductoId: { type: string, format: uuid }
+
+    EditarProductoRequest:
+      type: object
+      minProperties: 1
+      properties:
+        nombre: { type: string, maxLength: 200 }
+        categoriaProductoId:
+          type: string
+          format: uuid
+          description: Inmutable. Solo se acepta si coincide con la actual.
+
+    ProductoResumen:
+      type: object
+      required: [productoId, nombre, categoria]
+      properties:
+        productoId: { type: string, format: uuid }
+        nombre: { type: string }
+        categoria:
+          $ref: '#/components/schemas/CatalogoItem'
+        registro:
+          allOf:
+            - $ref: '#/components/schemas/RegistroSanitario'
+          nullable: true
+          description: Nulo si ninguna regla aplicó o el registro fue dado de baja.
+
+    ProductoDetalle:
+      allOf:
+        - $ref: '#/components/schemas/ProductoResumen'
+
+    ProductoCreadoResponse:
+      type: object
+      required: [producto]
+      properties:
+        producto:
+          $ref: '#/components/schemas/ProductoResumen'
+        mensaje:
+          type: string
+          nullable: true
+          description: Presente si ninguna regla aplicó (se guardó sin registro ni checklist).
+
+    ProductoPagina:
+      allOf:
+        - $ref: '#/components/schemas/PaginaBase'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductoResumen'
+
+    # ───────── Establecimiento y licencia ─────────
+    CrearEstablecimientoRequest:
+      type: object
+      required: [nombre, tipoEstablecimientoId, ubicacion]
+      properties:
+        nombre: { type: string, maxLength: 200, example: Bodega Principal }
+        tipoEstablecimientoId: { type: string, format: uuid }
+        ubicacion: { type: string, maxLength: 300 }
+
+    LicenciaSanitaria:
+      type: object
+      required: [licenciaId, establecimientoId, tipoDocumento, estado, numero, fechaEmision, fechaVencimiento, diasParaVencer, requiereVerificacion, tieneChecklist]
+      properties:
+        licenciaId: { type: string, format: uuid }
+        establecimientoId: { type: string, format: uuid }
+        tipoDocumento:
+          $ref: '#/components/schemas/TipoDocumentoResumen'
+        estado:
+          $ref: '#/components/schemas/EstadoVencimiento'
+        numero: { type: string, nullable: true }
+        fechaEmision: { type: string, format: date, nullable: true }
+        fechaVencimiento: { type: string, format: date, nullable: true }
+        diasParaVencer: { type: integer, nullable: true }
+        requiereVerificacion: { type: boolean }
+        tieneChecklist: { type: boolean }
+
+    EstablecimientoResumen:
+      type: object
+      required: [establecimientoId, nombre, tipo, ubicacion]
+      properties:
+        establecimientoId: { type: string, format: uuid }
+        nombre: { type: string }
+        tipo:
+          $ref: '#/components/schemas/CatalogoItem'
+        ubicacion: { type: string }
+        licencia:
+          allOf:
+            - $ref: '#/components/schemas/LicenciaSanitaria'
+          nullable: true
+          description: Nula si ninguna regla aplicó o la licencia fue dada de baja.
+
+    EstablecimientoDetalle:
+      allOf:
+        - $ref: '#/components/schemas/EstablecimientoResumen'
+
+    EstablecimientoCreadoResponse:
+      type: object
+      required: [establecimiento]
+      properties:
+        establecimiento:
+          $ref: '#/components/schemas/EstablecimientoResumen'
+        mensaje:
+          type: string
+          nullable: true
+
+    EstablecimientoPagina:
+      allOf:
+        - $ref: '#/components/schemas/PaginaBase'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/EstablecimientoResumen'
+
+    LicenciaListado:
+      type: object
+      required: [licenciaId, establecimiento, tipoDocumento, estado, numero, fechaEmision, fechaVencimiento, diasParaVencer, requiereVerificacion, tieneChecklist]
+      properties:
+        licenciaId: { type: string, format: uuid }
+        establecimiento:
+          type: object
+          required: [establecimientoId, nombre]
+          properties:
+            establecimientoId: { type: string, format: uuid }
+            nombre: { type: string }
+        tipoDocumento:
+          $ref: '#/components/schemas/TipoDocumentoResumen'
+        estado:
+          $ref: '#/components/schemas/EstadoVencimiento'
+        numero: { type: string, nullable: true }
+        fechaEmision: { type: string, format: date, nullable: true }
+        fechaVencimiento: { type: string, format: date, nullable: true }
+        diasParaVencer: { type: integer, nullable: true }
+        requiereVerificacion: { type: boolean }
+        tieneChecklist: { type: boolean }
+
+    LicenciaPagina:
+      allOf:
+        - $ref: '#/components/schemas/PaginaBase'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/LicenciaListado'
+
+    PaginaBase:
+      type: object
+      required: [pagina, tamanoPagina, total]
+      properties:
+        pagina: { type: integer }
+        tamanoPagina: { type: integer }
+        total: { type: integer }
+
+    # ───────── Checklist ─────────
+    RequisitoChecklist:
+      type: object
+      required: [checklistRequisitoId, requisitoId, descripcion, tipoRequisito, obligatorio, orden, estado, responsable, fechaLimite, fechaCumplimiento]
+      properties:
+        checklistRequisitoId:
+          type: string
+          format: uuid
+          description: Identifica este ítem del checklist (un requisito dentro de un registro o licencia).
+        requisitoId: { type: string, format: uuid }
+        descripcion:
+          type: string
+          description: Se lee del catálogo de requisitos, no se congela en el MVP.
+        tipoRequisito:
+          type: string
+          enum: [Documento, Dato, Accion]
+        obligatorio:
+          type: boolean
+          description: "Se lee de los requisitos del documento (catálogo)."
+        orden:
+          type: integer
+          description: Copiado del catálogo al crear el checklist; no cambia después.
+        estado:
+          type: string
+          enum: [Pendiente, Cumplido]
+        responsable:
+          type: object
+          nullable: true
+          required: [usuarioId, nombre]
+          properties:
+            usuarioId: { type: string, format: uuid }
+            nombre: { type: string }
+        fechaLimite: { type: string, format: date, nullable: true }
+        fechaCumplimiento: { type: string, format: date-time, nullable: true }
+
+    Avance:
+      type: object
+      required: [cumplidos, total, porcentaje]
+      properties:
+        cumplidos: { type: integer, example: 3 }
+        total: { type: integer, example: 6 }
+        porcentaje: { type: number, format: float, example: 50 }
+
+    Bloqueo:
+      type: object
+      description: Calculado al consultar (no se guarda).
+      required: [bloqueado, faltantes]
+      properties:
+        bloqueado: { type: boolean }
+        faltantes:
+          type: array
+          description: Documentos requeridos que no existen emitidos y no vencidos.
+          items:
+            $ref: '#/components/schemas/TipoDocumentoResumen'
+
+    Checklist:
+      type: object
+      required: [origen, origenId, tipoDocumento, avance, bloqueo, requisitos]
+      properties:
+        origen:
+          type: string
+          enum: [Registro, Licencia]
+        origenId:
+          type: string
+          format: uuid
+          description: "`registroId` o `licenciaId` según `origen`."
+        tipoDocumento:
+          $ref: '#/components/schemas/TipoDocumentoResumen'
+        avance:
+          $ref: '#/components/schemas/Avance'
+        bloqueo:
+          $ref: '#/components/schemas/Bloqueo'
+        requisitos:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequisitoChecklist'
+
+    ActualizarRequisitoRequest:
+      type: object
+      minProperties: 1
+      properties:
+        estado:
+          type: string
+          enum: [Pendiente, Cumplido]
+        responsableUsuarioId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Debe ser un usuario de la empresa.
+        fechaLimite:
+          type: string
+          format: date
+          nullable: true
+
+    # ───────── Alertas ─────────
+    Alerta:
+      type: object
+      required: [tipo, nombre, numero, fechaVencimiento, diasParaVencer, estado]
+      properties:
+        tipo:
+          type: string
+          enum: [Producto, Licencia]
+          description: "`Producto` → viene `productoId`. `Licencia` → viene `establecimientoId`."
+        productoId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Presente solo si `tipo` es `Producto`. Para llevar al detalle.
+        establecimientoId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Presente solo si `tipo` es `Licencia`. Para llevar al detalle de su licencia.
+        nombre:
+          type: string
+          description: Nombre del producto o del establecimiento.
+        numero:
+          type: string
+          description: Número del registro o licencia (siempre emitido).
+        fechaVencimiento: { type: string, format: date }
+        diasParaVencer:
+          type: integer
+          description: Negativo si ya venció.
+        estado:
+          type: string
+          enum: [PorVencer, Vencido]
+          description: Solo estos dos estados generan alertas.
+
+    AlertasResponse:
+      type: object
+      required: [fechaReferencia, total, vencidos, hasta30Dias, de31a60Dias, de61a90Dias]
+      properties:
+        fechaReferencia:
+          type: string
+          format: date
+          description: "Hoy en Honduras."
+        total: { type: integer }
+        vencidos:
+          type: array
+          items: { $ref: '#/components/schemas/Alerta' }
+        hasta30Dias:
+          type: array
+          items: { $ref: '#/components/schemas/Alerta' }
+        de31a60Dias:
+          type: array
+          items: { $ref: '#/components/schemas/Alerta' }
+        de61a90Dias:
+          type: array
+          items: { $ref: '#/components/schemas/Alerta' }
+
+    # ───────── Expediente ─────────
+    Expediente:
+      type: object
+      required: [empresa, producto, generadoEn]
+      properties:
+        generadoEn: { type: string, format: date-time }
+        empresa:
+          type: object
+          properties:
+            nombre: { type: string }
+        producto:
+          type: object
+          required: [productoId, nombre, categoria]
+          properties:
+            productoId: { type: string, format: uuid }
+            nombre: { type: string }
+            categoria:
+              $ref: '#/components/schemas/CatalogoItem'
+        registro:
+          allOf:
+            - $ref: '#/components/schemas/RegistroSanitario'
+          nullable: true
+          description: Nulo si no hay registro o fue dado de baja.
+        checklist:
+          allOf:
+            - $ref: '#/components/schemas/Checklist'
+          nullable: true
+          description: Presente solo si el registro tiene checklist (avance y bloqueo).
+
+    # ───────── Dashboard ─────────
+    TotalesPorEstado:
+      type: object
+      required: [noVerificado, enTramite, vigente, porVencer, vencido]
+      properties:
+        noVerificado: { type: integer }
+        enTramite: { type: integer }
+        vigente: { type: integer }
+        porVencer: { type: integer }
+        vencido: { type: integer }
+
+    DashboardResumen:
+      type: object
+      required: [productos, licencias, fechaReferencia]
+      properties:
+        fechaReferencia: { type: string, format: date }
+        productos:
+          $ref: '#/components/schemas/TotalesPorEstado'
+        licencias:
+          $ref: '#/components/schemas/TotalesPorEstado'
