@@ -1,11 +1,12 @@
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Application.Abstractions;
+using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Infrastructure.Persistence;
-using Sentinel.Infrastructure.Services;
 using Sentinel.Infrastructure.Repositories;
+using Sentinel.Infrastructure.Services;
 
 namespace Sentinel.Infrastructure;
 

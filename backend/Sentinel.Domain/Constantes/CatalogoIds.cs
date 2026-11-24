@@ -67,7 +67,8 @@ public static class CatalogoIds
         public const int Establecimiento = 2;
     }
 
-    public static class TiposRequisito {
+    public static class TiposRequisito
+    {
         public const int Documento = 1;
         public const int Dato = 2;
         public const int Accion = 3;
