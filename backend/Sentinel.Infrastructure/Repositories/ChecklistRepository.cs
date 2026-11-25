@@ -37,4 +37,18 @@ public sealed class ChecklistRepository(AppDbContext db) : IChecklistRepository
         => db.ChecklistRequisitos.AnyAsync(c => c.LicenciaSanitariaId == licenciaId, ct);
 
     public void Agregar(ChecklistRequisito fila) => db.ChecklistRequisitos.Add(fila);
+
+    public async Task<HashSet<Guid>> LicenciaIdsConChecklistAsync(IReadOnlyList<Guid> licenciaIds, CancellationToken ct)
+    {
+        if (licenciaIds.Count == 0) return [];
+
+        var ids = licenciaIds.ToList();
+        var conChecklist = await db.ChecklistRequisitos
+            .Where(c => c.LicenciaSanitariaId != null && ids.Contains(c.LicenciaSanitariaId.Value))
+            .Select(c => c.LicenciaSanitariaId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+
+        return [.. conChecklist];
+    }
 }

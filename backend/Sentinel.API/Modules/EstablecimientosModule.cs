@@ -1,10 +1,22 @@
-using Microsoft.Extensions.DependencyInjection;
+using Sentinel.Application.Abstractions.Repositories;
+using Sentinel.Application.Features.Establecimientos.Listar;
+using Sentinel.Infrastructure.Repositories;
+using Sentinel.Application.Features.Establecimientos.Crear;
+using Sentinel.Application.Features.Establecimientos.Obtener;
+using Sentinel.Application.Features.Establecimientos.DarDeBaja;
 
 namespace Sentinel.API.Modules;
 
-// P4 · Establecimientos (H6).
-// Dueño: P4. Handlers en Application/Features/Establecimientos.
 public static class EstablecimientosModule
 {
-    public static IServiceCollection AddEstablecimientosModule(this IServiceCollection s) => s;
+    public static IServiceCollection AddEstablecimientosModule(this IServiceCollection s)
+    {
+        s.AddScoped<IEstablecimientoRepository, EstablecimientoRepository>();
+        s.AddScoped<ILicenciaRepository, LicenciaRepository>();
+        s.AddScoped<ListarEstablecimientos>();
+        s.AddScoped<CrearEstablecimiento>();
+        s.AddScoped<ObtenerEstablecimiento>();
+        s.AddScoped<DarDeBajaEstablecimiento>();
+        return s;
+    }
 }

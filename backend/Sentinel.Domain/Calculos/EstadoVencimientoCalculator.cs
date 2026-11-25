@@ -16,4 +16,10 @@ public static class EstadoVencimientoCalculator
         if (dias <= DiasUmbralPorVencer) return EstadoVencimiento.PorVencer;
         return EstadoVencimiento.Vigente;
     }
+
+    public static EstadoVencimiento Resolver(EstadoVencimiento almacenado, DateOnly? vencimiento, DateOnly hoy)
+    => vencimiento is { } fecha ? Calcular(fecha, hoy) : almacenado;
+
+    public static int? DiasRestantes(DateOnly? vencimiento, DateOnly hoy)
+        => vencimiento is { } fecha ? DiasRestantes(fecha, hoy) : null;
 }

@@ -11,6 +11,8 @@ public interface IDocumentoRepository
     Task<bool> ExisteTipoDocumentoAsync(int id, CancellationToken ct);
     void AgregarTipoDocumento(TipoDocumento entidad);
 
+    Task<List<TipoDocumento>> ObtenerTiposDocumentoAsync(IReadOnlyList<int> ids, CancellationToken ct);
+
     // --- Requisito ---
     Task<Requisito?> ObtenerRequisitoAsync(int id, CancellationToken ct);
     Task<bool> ExisteRequisitoAsync(int id, CancellationToken ct);

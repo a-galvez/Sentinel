@@ -32,9 +32,11 @@ public sealed class EvaluadorDependencias(IAppDbContext db, IClock clock) : IEva
         var bloqueantes = new List<DependenciaPendiente>();
         foreach (var requerido in requiere)
         {
+            // Sin fecha de vencimiento (No verificado / En trámite) no cuenta como cumplida.
             var vigente = licencias.Any(l =>
                 l.TipoDocumentoId == requerido
-                && EstadoVencimientoCalculator.Calcular(l.FechaVencimiento, hoy) != EstadoVencimiento.Vencido);
+                && l.FechaVencimiento is { } vencimiento
+                && EstadoVencimientoCalculator.Calcular(vencimiento, hoy) != EstadoVencimiento.Vencido);
 
             if (!vigente)
             {
