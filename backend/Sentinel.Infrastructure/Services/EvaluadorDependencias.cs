@@ -2,13 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Sentinel.Application.Abstractions;
 using Sentinel.Domain.Calculos;
 using Sentinel.Domain.Enums;
-
+using Sentinel.Infrastructure.Persistence;
 namespace Sentinel.Infrastructure.Services;
 
 // Implementación de IEvaluaDependencias (H11 BE-7). Evalúa DOCUMENTO_DEPENDENCIA al consultar:
 // no se guarda nada. Una dependencia se cumple si la empresa tiene una licencia de ese tipo no
 // dada de baja y no vencida (fecha de vencimiento >= hoy).
-public sealed class EvaluadorDependencias(IAppDbContext db, IClock clock) : IEvaluaDependencias
+public sealed class EvaluadorDependencias(AppDbContext db, IClock clock) : IEvaluaDependencias
 {
     public async Task<IReadOnlyList<DependenciaPendiente>> SinCumplirAsync(
         int tipoDocumentoId, Guid empresaId, CancellationToken ct)

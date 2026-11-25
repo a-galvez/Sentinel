@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Sentinel.Application.Abstractions;
 using Sentinel.Domain.Constantes;
 using Sentinel.Domain.Entities;
+using Sentinel.Infrastructure.Persistence;
 
 namespace Sentinel.Infrastructure.Services;
 
@@ -13,7 +14,7 @@ namespace Sentinel.Infrastructure.Services;
 //
 // Qué NO hace: no llama SaveChanges. Deja el TipoDocumento y las filas del checklist en el
 // DbContext para que el caso de uso del alta haga un solo SaveChanges (misma transacción).
-public sealed class MotorRequisitos(IAppDbContext db) : IMotorRequisitos
+public sealed class MotorRequisitos(AppDbContext db) : IMotorRequisitos
 {
     public async Task AplicarAProductoAsync(Producto producto, CancellationToken ct)
     {

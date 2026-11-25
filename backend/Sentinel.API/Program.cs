@@ -5,8 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
-using Sentinel.API.Middleware;
-using Sentinel.API.Modules;
 using Sentinel.Application;
 using Sentinel.Infrastructure;
 using Sentinel.Infrastructure.Persistence;
@@ -66,17 +64,6 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
-builder.Services
-    .AddAuthModule(builder.Configuration)
-    .AddRegistroModule()
-    .AddProductosModule()
-    .AddCatalogosModule()
-    .AddEstablecimientosModule()
-    .AddLicenciasModule()
-    .AddAlertasModule()
-    .AddRequisitosModule()
-    .AddExpedienteModule()
-    .AddDashboardModule();
 
 var app = builder.Build();
 
@@ -93,7 +80,6 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseCors("PoliticaCorsSentinel");
 app.UseAuthentication();
 app.UseAuthorization();

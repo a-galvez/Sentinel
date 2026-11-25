@@ -19,7 +19,6 @@ public static class DependencyInjection
 
         s.AddHttpContextAccessor();
         s.AddDbContext<AppDbContext>(o => o.UseNpgsql(connectionString));
-        s.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         s.AddScoped<ICurrentTenant, HttpCurrentTenant>();
         s.AddSingleton<IClock, HondurasClock>();
         s.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
