@@ -5,7 +5,7 @@ using Sentinel.Domain.Entities;
 namespace Sentinel.Infrastructure.Persistence;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant tenant)
-    : DbContext(options), IAppDbContext
+    : DbContext(options)
 {
     public Guid? TenantId => tenant.TieneSesion ? tenant.EmpresaId : null;
 

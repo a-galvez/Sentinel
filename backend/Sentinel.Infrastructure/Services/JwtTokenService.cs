@@ -6,13 +6,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Sentinel.Application.Abstractions;
 using Sentinel.Domain.Entities;
+using Sentinel.Infrastructure.Persistence;
 
 namespace Sentinel.Infrastructure.Services;
 
 // Emite el JWT (access token) y gestiona los refresh tokens: los guarda con hash SHA256
 // (determinístico, para buscarlos en POST /auth/refresh) y devuelve el valor en claro.
 public sealed class JwtTokenService(
-    IAppDbContext db,
+    AppDbContext db,
     IClock clock,
     IConfiguration cfg) : ITokenService
 {
