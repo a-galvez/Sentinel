@@ -136,7 +136,7 @@ María completa la licencia: número `LS-0001-EJ`, emisión 2026-12-10, vencimie
 
 ## 6. Notas
 
-- Todos los ids son GUID. En los catálogos y la base de conocimiento son fijos (seeds idempotentes).
+- Los ids de las entidades (empresa, usuario, establecimiento, producto, licencia, registro, checklist) son GUID. Los ids de los catálogos y la base de conocimiento (categorías, tipos, requisitos, documentos, etc.) son enteros fijos (seeds idempotentes).
 - Cada fila del checklist apunta a una licencia **o** a un registro, nunca a ambos.
 - Cada regla debe tener al menos una condición en `CondicionJson`; la aplicación lo valida (no hay restricción en la base de datos).
 - El número de registro es único por empresa e ignora los NULL.

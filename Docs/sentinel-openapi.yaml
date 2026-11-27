@@ -354,9 +354,9 @@ paths:
                 categorias:
                   summary: Categorías de producto
                   value:
-                  - id: 00000000-0000-4000-8000-000000000101
+                  - id: 1
                     nombre: Medicamento
-                  - id: 00000000-0000-4000-8000-000000000102
+                  - id: 3
                     nombre: Cosmético
         '401':
           $ref: '#/components/responses/NoAutenticado'
@@ -453,7 +453,7 @@ paths:
                     - productoId: 00000000-0000-4000-8000-000000000201
                       nombre: Paracetamol 500 mg
                       categoria:
-                        id: 00000000-0000-4000-8000-000000000101
+                        id: 1
                         nombre: Medicamento
                       registro:
                         registroId: 00000000-0000-4000-8000-000000000401
@@ -474,7 +474,7 @@ paths:
                     - productoId: 00000000-0000-4000-8000-000000000202
                       nombre: Ibuprofeno 400 mg
                       categoria:
-                        id: 00000000-0000-4000-8000-000000000101
+                        id: 1
                         nombre: Medicamento
                       registro:
                         registroId: 00000000-0000-4000-8000-000000000402
@@ -536,7 +536,7 @@ paths:
                 summary: Medicamento
                 value:
                   nombre: Paracetamol 500 mg
-                  categoriaProductoId: 00000000-0000-4000-8000-000000000101
+                  categoriaProductoId: 1
       responses:
         '201':
           description: Producto creado.
@@ -552,7 +552,7 @@ paths:
                       productoId: 00000000-0000-4000-8000-000000000201
                       nombre: Paracetamol 500 mg
                       categoria:
-                        id: 00000000-0000-4000-8000-000000000101
+                        id: 1
                         nombre: Medicamento
                       registro:
                         registroId: 00000000-0000-4000-8000-000000000401
@@ -577,7 +577,7 @@ paths:
                       productoId: 00000000-0000-4000-8000-000000000203
                       nombre: Crema hidratante facial
                       categoria:
-                        id: 00000000-0000-4000-8000-000000000102
+                        id: 3
                         nombre: Cosmético
                       registro: null
                     mensaje: No existe una regla que aplique a este producto. Se guardó sin registro sanitario ni checklist.
@@ -623,7 +623,7 @@ paths:
                     productoId: 00000000-0000-4000-8000-000000000201
                     nombre: Paracetamol 500 mg
                     categoria:
-                      id: 00000000-0000-4000-8000-000000000101
+                      id: 1
                       nombre: Medicamento
                     registro:
                       registroId: 00000000-0000-4000-8000-000000000401
@@ -688,7 +688,7 @@ paths:
                     productoId: 00000000-0000-4000-8000-000000000201
                     nombre: Paracetamol 500 mg
                     categoria:
-                      id: 00000000-0000-4000-8000-000000000101
+                      id: 1
                       nombre: Medicamento
                     registro:
                       registroId: 00000000-0000-4000-8000-000000000401
@@ -1756,7 +1756,7 @@ paths:
                         vigenciaMeses: 12
                     requisitos:
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000601
-                      requisitoId: 00000000-0000-4000-8000-000000000701
+                      requisitoId: 1
                       descripcion: Solicitud
                       tipoRequisito: Documento
                       obligatorio: true
@@ -1768,7 +1768,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: '2026-11-23T15:30:00Z'
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000602
-                      requisitoId: 00000000-0000-4000-8000-000000000702
+                      requisitoId: 2
                       descripcion: Declaración jurada
                       tipoRequisito: Documento
                       obligatorio: true
@@ -1778,7 +1778,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: null
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000603
-                      requisitoId: 00000000-0000-4000-8000-000000000703
+                      requisitoId: 3
                       descripcion: Ficha técnica
                       tipoRequisito: Documento
                       obligatorio: true
@@ -1788,7 +1788,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: null
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000604
-                      requisitoId: 00000000-0000-4000-8000-000000000704
+                      requisitoId: 4
                       descripcion: Certificado de buenas prácticas de manufactura
                       tipoRequisito: Documento
                       obligatorio: true
@@ -1798,7 +1798,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: null
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000605
-                      requisitoId: 00000000-0000-4000-8000-000000000705
+                      requisitoId: 5
                       descripcion: Etiqueta
                       tipoRequisito: Documento
                       obligatorio: true
@@ -1808,7 +1808,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: null
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000606
-                      requisitoId: 00000000-0000-4000-8000-000000000706
+                      requisitoId: 6
                       descripcion: Pago de tasa
                       tipoRequisito: Accion
                       obligatorio: true
@@ -1869,7 +1869,7 @@ paths:
                       faltantes: []
                     requisitos:
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000611
-                      requisitoId: 00000000-0000-4000-8000-000000000721
+                      requisitoId: 1
                       descripcion: Solicitud
                       tipoRequisito: Documento
                       obligatorio: true
@@ -1881,7 +1881,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: '2026-11-23T15:30:00Z'
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000612
-                      requisitoId: 00000000-0000-4000-8000-000000000722
+                      requisitoId: 2
                       descripcion: Declaración jurada
                       tipoRequisito: Documento
                       obligatorio: true
@@ -1893,7 +1893,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: '2026-11-23T15:30:00Z'
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000613
-                      requisitoId: 00000000-0000-4000-8000-000000000723
+                      requisitoId: 3
                       descripcion: Planos del local
                       tipoRequisito: Documento
                       obligatorio: true
@@ -1905,7 +1905,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: '2026-11-23T15:30:00Z'
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000614
-                      requisitoId: 00000000-0000-4000-8000-000000000724
+                      requisitoId: 4
                       descripcion: Regente farmacéutico
                       tipoRequisito: Dato
                       obligatorio: true
@@ -1915,7 +1915,7 @@ paths:
                       fechaLimite: null
                       fechaCumplimiento: null
                     - checklistRequisitoId: 00000000-0000-4000-8000-000000000615
-                      requisitoId: 00000000-0000-4000-8000-000000000725
+                      requisitoId: 5
                       descripcion: Pago de tasa
                       tipoRequisito: Accion
                       obligatorio: true
@@ -1987,7 +1987,7 @@ paths:
                   summary: Requisito marcado como cumplido
                   value:
                     checklistRequisitoId: 00000000-0000-4000-8000-000000000601
-                    requisitoId: 00000000-0000-4000-8000-000000000701
+                    requisitoId: 1
                     descripcion: Solicitud
                     tipoRequisito: Documento
                     obligatorio: true
@@ -2149,7 +2149,7 @@ paths:
                       productoId: 00000000-0000-4000-8000-000000000201
                       nombre: Paracetamol 500 mg
                       categoria:
-                        id: 00000000-0000-4000-8000-000000000101
+                        id: 1
                         nombre: Medicamento
                     registro:
                       registroId: 00000000-0000-4000-8000-000000000401
@@ -2190,7 +2190,7 @@ paths:
                           vigenciaMeses: 12
                       requisitos:
                       - checklistRequisitoId: 00000000-0000-4000-8000-000000000601
-                        requisitoId: 00000000-0000-4000-8000-000000000701
+                        requisitoId: 1
                         descripcion: Solicitud
                         tipoRequisito: Documento
                         obligatorio: true
@@ -2202,7 +2202,7 @@ paths:
                         fechaLimite: null
                         fechaCumplimiento: '2026-11-23T15:30:00Z'
                       - checklistRequisitoId: 00000000-0000-4000-8000-000000000602
-                        requisitoId: 00000000-0000-4000-8000-000000000702
+                        requisitoId: 2
                         descripcion: Declaración jurada
                         tipoRequisito: Documento
                         obligatorio: true
@@ -2212,7 +2212,7 @@ paths:
                         fechaLimite: null
                         fechaCumplimiento: null
                       - checklistRequisitoId: 00000000-0000-4000-8000-000000000603
-                        requisitoId: 00000000-0000-4000-8000-000000000703
+                        requisitoId: 3
                         descripcion: Ficha técnica
                         tipoRequisito: Documento
                         obligatorio: true
@@ -2222,7 +2222,7 @@ paths:
                         fechaLimite: null
                         fechaCumplimiento: null
                       - checklistRequisitoId: 00000000-0000-4000-8000-000000000604
-                        requisitoId: 00000000-0000-4000-8000-000000000704
+                        requisitoId: 4
                         descripcion: Certificado de buenas prácticas de manufactura
                         tipoRequisito: Documento
                         obligatorio: true
@@ -2232,7 +2232,7 @@ paths:
                         fechaLimite: null
                         fechaCumplimiento: null
                       - checklistRequisitoId: 00000000-0000-4000-8000-000000000605
-                        requisitoId: 00000000-0000-4000-8000-000000000705
+                        requisitoId: 5
                         descripcion: Etiqueta
                         tipoRequisito: Documento
                         obligatorio: true
@@ -2242,7 +2242,7 @@ paths:
                         fechaLimite: null
                         fechaCumplimiento: null
                       - checklistRequisitoId: 00000000-0000-4000-8000-000000000606
-                        requisitoId: 00000000-0000-4000-8000-000000000706
+                        requisitoId: 6
                         descripcion: Pago de tasa
                         tipoRequisito: Accion
                         obligatorio: true
@@ -2529,7 +2529,7 @@ components:
       required: [nombre, categoriaProductoId]
       properties:
         nombre: { type: string, maxLength: 200, example: Paracetamol 500 mg }
-        categoriaProductoId: { type: string, format: uuid }
+        categoriaProductoId: { type: integer }
 
     EditarProductoRequest:
       type: object
@@ -2537,8 +2537,7 @@ components:
       properties:
         nombre: { type: string, maxLength: 200 }
         categoriaProductoId:
-          type: string
-          format: uuid
+          type: integer
           description: Inmutable. Solo se acepta si coincide con la actual.
 
     ProductoResumen:
@@ -2697,7 +2696,7 @@ components:
           type: string
           format: uuid
           description: Identifica este ítem del checklist (un requisito dentro de un registro o licencia).
-        requisitoId: { type: string, format: uuid }
+        requisitoId: { type: integer }
         descripcion:
           type: string
           description: Se lee del catálogo de requisitos, no se congela en el MVP.
