@@ -5,10 +5,10 @@ using Sentinel.Infrastructure.Persistence;
 
 namespace Sentinel.Infrastructure.Repositories;
 
-public sealed class EmpresaRepository(AppDbContext db) : IEmpresaRepository
+public class EmpresaRepository(AppDbContext db) : IEmpresaRepository
 {
     public Task<Empresa?> ObtenerAsync(Guid empresaId, CancellationToken ct)
         => db.Empresas.SingleOrDefaultAsync(e => e.EmpresaId == empresaId, ct);
-
+        
     public void Agregar(Empresa empresa) => db.Empresas.Add(empresa);
 }

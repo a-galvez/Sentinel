@@ -6,7 +6,9 @@ using Sentinel.Application.Abstractions;
 using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Infrastructure.Persistence;
 using Sentinel.Infrastructure.Repositories;
+using Sentinel.Infrastructure.Seeding;
 using Sentinel.Infrastructure.Services;
+
 
 namespace Sentinel.Infrastructure;
 
@@ -38,9 +40,12 @@ public static class DependencyInjection
         s.AddScoped<IProductoRepository, ProductoRepository>();
         s.AddScoped<IRegistroSanitarioRepository, RegistroSanitarioRepository>();
 
-        // Implementación vacía. P5 debe registrar la real cuando restaure su feature.
-        s.AddScoped<IMotorRequisitos, MotorRequisitosVacio>();
-
+        s.AddScoped<IMotorRequisitos, MotorRequisitos>();
+        s.AddScoped<IEvaluaDependencias, EvaluadorDependencias>();
+      
+        s.AddScoped<CatalogoSeeder>();
+        s.AddHostedService<CatalogoSeederHostedService>();
+      
         return s;
     }
 }

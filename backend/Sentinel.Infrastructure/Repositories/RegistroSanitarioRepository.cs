@@ -32,4 +32,19 @@ public sealed class RegistroSanitarioRepository(AppDbContext db) : IRegistroSani
 
     public void Agregar(RegistroSanitario registro)
         => db.RegistrosSanitarios.Add(registro);
+
+    public async Task<List<RegistroSanitario>> ObtenerPorProductosAsync(
+        IReadOnlyCollection<Guid> productoIds,
+        CancellationToken ct)
+    {
+        if (productoIds.Count == 0)
+            return new List<RegistroSanitario>();
+
+        var ids = productoIds.ToList();
+
+        return await db.RegistrosSanitarios
+            .Where(r => ids.Contains(r.ProductoId))
+            .ToListAsync(ct);
+    }
+
 }
