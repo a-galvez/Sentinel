@@ -404,6 +404,9 @@ namespace Sentinel.Infrastructure.Migrations
 
                     b.HasIndex("AmbitoDocumentoId");
 
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
                     b.ToTable("TiposDocumento");
                 });
 
