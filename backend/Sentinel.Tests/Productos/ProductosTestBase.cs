@@ -1,7 +1,5 @@
 using Sentinel.API.Controllers.Productos;
 using Sentinel.API.Controllers.RegistrosSanitarios;
-using Sentinel.Application.Abstractions;
-using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Application.Features.Productos.Validators;
 using Sentinel.Domain.Constantes;
 using Sentinel.Domain.Entities;
@@ -43,21 +41,19 @@ public abstract class ProductosTestBase
             new DocumentoRepository(db),
             new ChecklistRepository(db),
             new EmpresaRepository(db),
+            new MotorRequisitos(db),
             new FakeTenant(EmpresaId, UsuarioId),
             new RelojFijo(Hoy),
             new UnitOfWork(db),
             new CrearProductoValidator(),
             new ProductoListadoValidator());
 
-    protected RegistrosSanitariosController CrearRegistrosController(
-        AppDbContext db,
-        IMotorRequisitos? motor = null)
+    protected RegistrosSanitariosController CrearRegistrosController(AppDbContext db)
         => new(
             new ProductoRepository(db),
             new RegistroSanitarioRepository(db),
             new DocumentoRepository(db),
             new ChecklistRepository(db),
-            motor ?? new MotorRequisitos(db),
             new FakeTenant(EmpresaId, UsuarioId),
             new RelojFijo(Hoy),
             new UnitOfWork(db),

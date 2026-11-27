@@ -28,6 +28,8 @@ public class ProductosController : ProductosApiControllerBase
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CrearProductoRequest> _crearValidator;
     private readonly IValidator<ProductoListadoQuery> _listadoValidator;
+    private readonly IMotorRequisitos _motor;
+
 
     public ProductosController(
         IProductoRepository productos,
@@ -36,6 +38,7 @@ public class ProductosController : ProductosApiControllerBase
         IDocumentoRepository documentos,
         IChecklistRepository checklists,
         IEmpresaRepository empresas,
+        IMotorRequisitos motor,
         ICurrentTenant tenant,
         IClock clock,
         IUnitOfWork unitOfWork,
@@ -48,12 +51,14 @@ public class ProductosController : ProductosApiControllerBase
         _documentos = documentos;
         _checklists = checklists;
         _empresas = empresas;
+        _motor = motor;
         _tenant = tenant;
         _clock = clock;
         _unitOfWork = unitOfWork;
         _crearValidator = crearValidator;
         _listadoValidator = listadoValidator;
     }
+
 
     [HttpGet]
     public async Task<IActionResult> Listar(
@@ -166,19 +171,17 @@ public class ProductosController : ProductosApiControllerBase
 
         var empresa = await _empresas.ObtenerAsync(empresaId, ct);
 
-        var tipoDocumentoId = await _productos.ElegirTipoDocumentoAsync(
-            request.CategoriaProductoId, ct);
-
         var producto = new Producto
         {
             ProductoId = Guid.NewGuid(),
             EmpresaId = empresaId,
             CategoriaProductoId = request.CategoriaProductoId,
-            TipoDocumentoId = tipoDocumentoId,
             Nombre = request.Nombre.Trim(),
             Fabricante = empresa?.Nombre ?? string.Empty,
             DadoDeBaja = false
         };
+
+        var tipoDocumentoId = await _motor.ElegirDocumentoParaProductoAsync(producto, ct);
 
         _productos.Agregar(producto);
 
