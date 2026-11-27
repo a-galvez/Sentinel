@@ -42,10 +42,10 @@ public static class DependencyInjection
 
         s.AddScoped<IMotorRequisitos, MotorRequisitos>();
         s.AddScoped<IEvaluaDependencias, EvaluadorDependencias>();
-      
+
         s.AddScoped<CatalogoSeeder>();
         s.AddHostedService<CatalogoSeederHostedService>();
-      
+
         return s;
     }
 }
