@@ -80,6 +80,9 @@ namespace Sentinel.Infrastructure.Migrations
                     b.Property<Guid?>("LicenciaSanitariaId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("ProductoId")
                         .HasColumnType("uuid");
 
@@ -238,12 +241,7 @@ namespace Sentinel.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("TipoDocumentoId")
-                        .HasColumnType("integer");
-
                     b.HasKey("ProductoId");
-
-                    b.HasIndex("TipoDocumentoId");
 
                     b.ToTable("Productos");
                 });
@@ -306,7 +304,7 @@ namespace Sentinel.Infrastructure.Migrations
                     b.Property<Guid>("ProductoId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("TipoDocumentoId")
+                    b.Property<int?>("TipoDocumentoId")
                         .HasColumnType("integer");
 
                     b.HasKey("RegistroSanitarioId");
@@ -508,14 +506,6 @@ namespace Sentinel.Infrastructure.Migrations
                     b.Navigation("Establecimiento");
                 });
 
-            modelBuilder.Entity("Sentinel.Domain.Entities.Producto", b =>
-                {
-                    b.HasOne("Sentinel.Domain.Entities.TipoDocumento", null)
-                        .WithMany()
-                        .HasForeignKey("TipoDocumentoId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-
             modelBuilder.Entity("Sentinel.Domain.Entities.RegistroSanitario", b =>
                 {
                     b.HasOne("Sentinel.Domain.Entities.Producto", "Producto")
@@ -527,8 +517,7 @@ namespace Sentinel.Infrastructure.Migrations
                     b.HasOne("Sentinel.Domain.Entities.TipoDocumento", null)
                         .WithMany()
                         .HasForeignKey("TipoDocumentoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Producto");
                 });

@@ -9,7 +9,7 @@ public static class RegistroSanitarioBuilder
         Guid empresaId,
         Guid productoId,
         Guid? registroSanitarioId = null,
-        int tipoDocumentoId = 1,
+        int? tipoDocumentoId = 1,
         string? numeroRegistro = null,
         DateOnly? fechaEmision = null,
         DateOnly? fechaVencimiento = null,
