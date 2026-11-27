@@ -146,10 +146,12 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
 
         await _unitOfWork.SaveChangesAsync(ct);
 
+        var tieneChecklist = await _checklists.ExisteParaProductoAsync(productoId, ct);
+
         var registroDto = await ProductoMapper.RegistroAsync(
             registro,
+            tieneChecklist,
             _documentos,
-            _checklists,
             _clock,
             ct);
 

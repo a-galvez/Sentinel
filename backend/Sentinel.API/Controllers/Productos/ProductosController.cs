@@ -27,6 +27,7 @@ public class ProductosController : ProductosApiControllerBase
     private readonly IClock _clock;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CrearProductoRequest> _crearValidator;
+    private readonly IValidator<ProductoListadoQuery> _listadoValidator;
 
     public ProductosController(
         IProductoRepository productos,
@@ -38,7 +39,8 @@ public class ProductosController : ProductosApiControllerBase
         ICurrentTenant tenant,
         IClock clock,
         IUnitOfWork unitOfWork,
-        IValidator<CrearProductoRequest> crearValidator)
+        IValidator<CrearProductoRequest> crearValidator,
+        IValidator<ProductoListadoQuery> listadoValidator)
     {
         _productos = productos;
         _registros = registros;
@@ -50,6 +52,90 @@ public class ProductosController : ProductosApiControllerBase
         _clock = clock;
         _unitOfWork = unitOfWork;
         _crearValidator = crearValidator;
+        _listadoValidator = listadoValidator;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Listar(
+        [FromQuery] ProductoListadoQuery query,
+        CancellationToken ct)
+    {
+        var validacion = await _listadoValidator.ValidateAsync(query, ct);
+        if (!validacion.IsValid)
+            return ValidacionInvalida(validacion);
+
+        EstadoVencimiento? estado = null;
+        if (!string.IsNullOrWhiteSpace(query.Estado))
+            estado = Enum.Parse<EstadoVencimiento>(query.Estado, true);
+
+        var skip = (query.Pagina - 1) * query.TamanoPagina;
+
+        var (productos, total) = await _productos.ListarAsync(
+            query.Q,
+            estado,
+            _clock.HoyHonduras,
+            skip,
+            query.TamanoPagina,
+            ct);
+
+        var ids = productos.Select(p => p.ProductoId).ToList();
+
+        var registros = await _registros.ObtenerPorProductosAsync(ids, ct);
+        var registrosPorProducto = registros.ToDictionary(r => r.ProductoId);
+
+        var conChecklist = await _productos.ProductosConChecklistAsync(ids, ct);
+
+        var items = new List<ProductoDto>();
+
+        foreach (var producto in productos)
+        {
+            registrosPorProducto.TryGetValue(producto.ProductoId, out var registro);
+
+            items.Add(await ProductoMapper.ProductoAsync(
+                producto,
+                registro,
+                conChecklist.Contains(producto.ProductoId),
+                _catalogos,
+                _documentos,
+                _clock,
+                ct));
+        }
+
+        var response = new ProductoPaginaDto
+        {
+            Pagina = query.Pagina,
+            TamanoPagina = query.TamanoPagina,
+            Total = total,
+            Items = items
+        };
+
+        return Ok(response);
+    }
+
+    [HttpGet("{productoId:guid}")]
+    public async Task<IActionResult> Obtener(
+        Guid productoId,
+        CancellationToken ct)
+    {
+        var producto = await _productos.ObtenerAsync(productoId, ct);
+        if (producto is null)
+            return Problema(404, "No encontrado", "Producto no encontrado.");
+
+        var registro = await _registros.ObtenerPorProductoAsync(productoId, ct);
+
+        var tieneChecklist = registro is not null
+            && await _checklists.ExisteParaProductoAsync(productoId, ct);
+
+        var dto = await ProductoMapper.ProductoAsync(
+            producto,
+            registro,
+            tieneChecklist,
+            _catalogos,
+            _documentos,
+            _clock,
+            ct);
+
+        return Ok(dto);
     }
 
     [HttpPost]
@@ -118,9 +204,9 @@ public class ProductosController : ProductosApiControllerBase
         var productoDto = await ProductoMapper.ProductoAsync(
             producto,
             registro,
+            false,
             _catalogos,
             _documentos,
-            _checklists,
             _clock,
             ct);
 

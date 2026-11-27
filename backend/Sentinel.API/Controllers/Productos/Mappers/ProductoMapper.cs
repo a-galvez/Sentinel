@@ -12,9 +12,9 @@ public static class ProductoMapper
     public static async Task<ProductoDto> ProductoAsync(
         Producto producto,
         RegistroSanitario? registro,
+        bool tieneChecklist,
         ICatalogoRepository catalogos,
         IDocumentoRepository documentos,
-        IChecklistRepository checklists,
         IClock clock,
         CancellationToken ct)
     {
@@ -33,14 +33,14 @@ public static class ProductoMapper
             },
             Registro = registro is null
                 ? null
-                : await RegistroAsync(registro, documentos, checklists, clock, ct)
+                : await RegistroAsync(registro, tieneChecklist, documentos, clock, ct)
         };
     }
 
     public static async Task<RegistroSanitarioDto> RegistroAsync(
         RegistroSanitario registro,
+        bool tieneChecklist,
         IDocumentoRepository documentos,
-        IChecklistRepository checklists,
         IClock clock,
         CancellationToken ct)
     {
@@ -55,9 +55,6 @@ public static class ProductoMapper
         var dias = registro.FechaVencimiento is { } fecha
             ? EstadoVencimientoCalculator.DiasRestantes(fecha, hoy)
             : (int?)null;
-
-        var tieneChecklist = await checklists.ExisteParaProductoAsync(
-            registro.ProductoId, ct);
 
         return new RegistroSanitarioDto
         {

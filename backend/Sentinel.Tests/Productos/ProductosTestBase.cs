@@ -5,6 +5,7 @@ using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Application.Features.Productos.Validators;
 using Sentinel.Domain.Constantes;
 using Sentinel.Domain.Entities;
+using Sentinel.Domain.Enums;
 using Sentinel.Infrastructure.Persistence;
 using Sentinel.Infrastructure.Repositories;
 using Sentinel.Infrastructure.Seeding;
@@ -45,7 +46,8 @@ public abstract class ProductosTestBase
             new FakeTenant(EmpresaId, UsuarioId),
             new RelojFijo(Hoy),
             new UnitOfWork(db),
-            new CrearProductoValidator());
+            new CrearProductoValidator(),
+            new ProductoListadoValidator());
 
     protected RegistrosSanitariosController CrearRegistrosController(
         AppDbContext db,
@@ -83,5 +85,39 @@ public abstract class ProductosTestBase
         await db.SaveChangesAsync(default);
 
         return (producto, registro);
+    }
+
+    protected async Task<Producto> SembrarProductoAsync(
+        AppDbContext db,
+        string nombre,
+        EstadoVencimiento estado,
+        string? numero = null,
+        DateOnly? fechaEmision = null,
+        DateOnly? fechaVencimiento = null,
+        bool dadoDeBaja = false,
+        Guid? empresaId = null)
+    {
+        var empresa = empresaId ?? EmpresaId;
+
+        var producto = ProductoBuilder.Crear(
+            empresa,
+            nombre: nombre,
+            categoriaProductoId: CatalogoIds.CategoriasProducto.Medicamento);
+
+        producto.DadoDeBaja = dadoDeBaja;
+
+        var registro = RegistroSanitarioBuilder.Crear(
+            empresa,
+            producto.ProductoId,
+            numeroRegistro: numero,
+            fechaEmision: fechaEmision,
+            fechaVencimiento: fechaVencimiento,
+            estado: estado);
+
+        db.Productos.Add(producto);
+        db.RegistrosSanitarios.Add(registro);
+        await db.SaveChangesAsync(default);
+
+        return producto;
     }
 }
