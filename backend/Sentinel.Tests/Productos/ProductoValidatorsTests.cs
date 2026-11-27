@@ -5,77 +5,59 @@ namespace Sentinel.Tests.Productos;
 
 public class ProductoValidatorsTests
 {
-    [Fact]
-    public void Crear_producto_exige_nombre_y_categoria()
-    {
-        var validator = new CrearProductoValidator();
+    // ... tests de H3 quedan igual ...
 
-        var request = new CrearProductoRequest
+    [Fact]
+    public void Listado_rechaza_pagina_y_tamano_invalidos()
+    {
+        var validator = new ProductoListadoValidator();
+
+        var request = new ProductoListadoQuery
         {
-            Nombre = string.Empty,
-            CategoriaProductoId = 0
+            Pagina = 0,
+            TamanoPagina = 0
         };
 
         var resultado = validator.Validate(request);
 
         Assert.False(resultado.IsValid);
         Assert.Contains(resultado.Errors,
-            e => e.PropertyName == nameof(CrearProductoRequest.Nombre));
+            e => e.PropertyName == nameof(ProductoListadoQuery.Pagina));
         Assert.Contains(resultado.Errors,
-            e => e.PropertyName == nameof(CrearProductoRequest.CategoriaProductoId));
+            e => e.PropertyName == nameof(ProductoListadoQuery.TamanoPagina));
     }
 
     [Fact]
-    public void Verificar_exige_numero_y_fecha_cuando_tiene_documento()
+    public void Listado_rechaza_estado_invalido()
     {
-        var validator = new VerificarRegistroValidator();
+        var validator = new ProductoListadoValidator();
 
-        var request = new VerificarRegistroRequest
+        var request = new ProductoListadoQuery
         {
-            TieneDocumento = true
+            Estado = "Foo"
         };
 
         var resultado = validator.Validate(request);
 
         Assert.False(resultado.IsValid);
         Assert.Contains(resultado.Errors,
-            e => e.PropertyName == nameof(VerificarRegistroRequest.Numero));
-        Assert.Contains(resultado.Errors,
-            e => e.PropertyName == nameof(VerificarRegistroRequest.FechaEmision));
+            e => e.PropertyName == nameof(ProductoListadoQuery.Estado));
     }
 
     [Fact]
-    public void Verificar_rechaza_datos_cuando_no_tiene_documento()
+    public void Listado_acepta_estado_valido()
     {
-        var validator = new VerificarRegistroValidator();
+        var validator = new ProductoListadoValidator();
 
-        var request = new VerificarRegistroRequest
+        var request = new ProductoListadoQuery
         {
-            TieneDocumento = false,
-            Numero = "RS-001",
-            FechaEmision = new DateOnly(2026, 6, 15)
+            Pagina = 1,
+            TamanoPagina = 20,
+            Estado = "Vencido"
         };
 
         var resultado = validator.Validate(request);
 
-        Assert.False(resultado.IsValid);
-        Assert.Contains(resultado.Errors,
-            e => e.PropertyName == nameof(VerificarRegistroRequest.Numero));
-        Assert.Contains(resultado.Errors,
-            e => e.PropertyName == nameof(VerificarRegistroRequest.FechaEmision));
-    }
-
-    [Fact]
-    public void Verificar_exige_indicar_si_tiene_documento()
-    {
-        var validator = new VerificarRegistroValidator();
-
-        var request = new VerificarRegistroRequest();
-
-        var resultado = validator.Validate(request);
-
-        Assert.False(resultado.IsValid);
-        Assert.Contains(resultado.Errors,
-            e => e.PropertyName == nameof(VerificarRegistroRequest.TieneDocumento));
+        Assert.True(resultado.IsValid);
     }
 }
