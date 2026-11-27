@@ -6,6 +6,68 @@ namespace Sentinel.Tests.Productos;
 public class ProductoValidatorsTests
 {
     [Fact]
+    public void Crear_acepta_datos_validos()
+    {
+        var validator = new CrearProductoValidator();
+
+        var resultado = validator.Validate(new CrearProductoRequest
+        {
+            Nombre = "Paracetamol 500 mg",
+            CategoriaProductoId = 1
+        });
+
+        Assert.True(resultado.IsValid);
+    }
+
+    [Fact]
+    public void Crear_rechaza_nombre_vacio()
+    {
+        var validator = new CrearProductoValidator();
+
+        var resultado = validator.Validate(new CrearProductoRequest
+        {
+            Nombre = "   ",
+            CategoriaProductoId = 1
+        });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(CrearProductoRequest.Nombre));
+    }
+
+    [Fact]
+    public void Crear_rechaza_nombre_largo()
+    {
+        var validator = new CrearProductoValidator();
+
+        var resultado = validator.Validate(new CrearProductoRequest
+        {
+            Nombre = new string('a', 201),
+            CategoriaProductoId = 1
+        });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(CrearProductoRequest.Nombre));
+    }
+
+    [Fact]
+    public void Crear_rechaza_categoria_invalida()
+    {
+        var validator = new CrearProductoValidator();
+
+        var resultado = validator.Validate(new CrearProductoRequest
+        {
+            Nombre = "Paracetamol",
+            CategoriaProductoId = 0
+        });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(CrearProductoRequest.CategoriaProductoId));
+    }
+
+    [Fact]
     public void Listado_rechaza_pagina_y_tamano_invalidos()
     {
         var validator = new ProductoListadoValidator();

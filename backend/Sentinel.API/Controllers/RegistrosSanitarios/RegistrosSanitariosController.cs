@@ -52,6 +52,36 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
         _emisionValidator = emisionValidator;
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Obtener(
+        Guid productoId,
+        CancellationToken ct)
+    {
+        var producto = await _productos.ObtenerAsync(productoId, ct);
+        if (producto is null)
+            return Problema(404, "No encontrado", "Producto no encontrado.");
+
+        var registro = await _registros.ObtenerPorProductoAsync(productoId, ct);
+        if (registro is null)
+        {
+            return Problema(
+                404,
+                "No encontrado",
+                "El producto no existe o no tiene registro sanitario.");
+        }
+
+        var tieneChecklist = await _checklists.ExisteParaProductoAsync(productoId, ct);
+
+        var dto = await ProductoMapper.RegistroAsync(
+            registro,
+            tieneChecklist,
+            _documentos,
+            _clock,
+            ct);
+
+        return Ok(dto);
+    }
+
     [HttpPost("verificacion")]
     public async Task<IActionResult> Verificar(
         Guid productoId,
