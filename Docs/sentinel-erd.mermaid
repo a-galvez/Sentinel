@@ -42,7 +42,7 @@ erDiagram
     PRODUCTO {
         guid ProductoId PK
         guid EmpresaId FK "Multi-tenant"
-        guid CategoriaProductoId FK
+        int CategoriaProductoId FK
         string Nombre
         boolean DadoDeBaja "Baja logica"
     }
@@ -50,8 +50,8 @@ erDiagram
         guid RegistroId PK
         guid ProductoId FK "Uno por producto"
         guid EmpresaId FK "Multi-tenant"
-        guid TipoDocumentoId FK "Asignado por el motor"
-        guid EstadoVencimientoId FK "En tramite, Vigente, Por vencer, Vencido"
+        int TipoDocumentoId FK "Asignado por el motor"
+        int EstadoVencimientoId FK "En tramite, Vigente, Por vencer, Vencido"
         string NumeroRegistro "Null hasta emitirse. Unico por empresa, ignora NULL"
         date FechaEmision "Null hasta emitirse"
         date FechaVencimiento "Null hasta emitirse. Emision + VigenciaMeses"
@@ -60,42 +60,42 @@ erDiagram
     CHECKLIST_REQUISITO {
         guid ChecklistId PK
         guid EmpresaId FK "Multi-tenant"
-        guid RequisitoId FK
+        int RequisitoId FK
         guid RegistroId FK "Nullable, uno de los dos"
         guid LicenciaId FK "Nullable, uno de los dos"
-        guid EstadoRequisitoId FK "Pendiente, Cumplido"
+        int EstadoRequisitoId FK "Pendiente, Cumplido"
         guid ResponsableUsuarioId FK "Nullable"
         int Orden "Copiado del catalogo"
         date FechaLimite
         datetime FechaCumplimiento
     }
     TIPO_ESTABLECIMIENTO {
-        guid TipoEstablecimientoId PK
+        int TipoEstablecimientoId PK
         string Nombre "Farmacia, Drogueria, Bodega"
     }
     CATEGORIA_PRODUCTO {
-        guid CategoriaProductoId PK
+        int CategoriaProductoId PK
         string Nombre "Medicamento, Cosmetico"
     }
     ESTADO_VENCIMIENTO {
-        guid EstadoVencimientoId PK
+        int EstadoVencimientoId PK
         string Nombre "En tramite, Vigente, Por vencer, Vencido"
     }
     ESTADO_REQUISITO {
-        guid EstadoRequisitoId PK
+        int EstadoRequisitoId PK
         string Nombre "Pendiente, Cumplido"
     }
     TIPO_REQUISITO {
-        guid TipoRequisitoId PK
+        int TipoRequisitoId PK
         string Nombre "Documento, Dato, Accion"
     }
     AMBITO_DOCUMENTO {
-        guid AmbitoDocumentoId PK
+        int AmbitoDocumentoId PK
         string Nombre "Producto, Establecimiento"
     }
     TIPO_DOCUMENTO {
-        guid TipoDocumentoId PK
-        guid AmbitoDocumentoId FK "Aplica a"
+        int TipoDocumentoId PK
+        int AmbitoDocumentoId FK "Aplica a"
         string Codigo "Unico"
         string Nombre
         string AutoridadEmisora
@@ -104,24 +104,24 @@ erDiagram
         boolean Activo
     }
     REQUISITO {
-        guid RequisitoId PK
-        guid TipoRequisitoId FK
+        int RequisitoId PK
+        int TipoRequisitoId FK
         string Descripcion
         boolean Activo
     }
     DOCUMENTO_REQUISITO {
-        guid TipoDocumentoId PK,FK
-        guid RequisitoId PK,FK
+        int TipoDocumentoId PK,FK
+        int RequisitoId PK,FK
         boolean Obligatorio
         int Orden
     }
     DOCUMENTO_DEPENDENCIA {
-        guid TipoDocumentoId PK,FK "Documento que depende"
-        guid RequiereTipoDocumentoId PK,FK "Licencia emitida y no vencida requerida (validado en backend)"
+        int TipoDocumentoId PK,FK "Documento que depende"
+        int RequiereTipoDocumentoId PK,FK "Licencia emitida y no vencida requerida (validado en backend)"
     }
     REGLA_APLICABILIDAD {
-        guid ReglaId PK
-        guid TipoDocumentoId FK "Documento que se activa"
+        int ReglaId PK
+        int TipoDocumentoId FK "Documento que se activa"
         int Prioridad "Define que regla se aplica primero en caso de que se solapen"
         string CondicionJson "Ids de tipo o categoria, Y/O en el JSON. Al menos una condicion (validado en backend)"
     }
