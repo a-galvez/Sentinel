@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
 
   <PropertyGroup>

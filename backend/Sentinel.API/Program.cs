@@ -1,13 +1,13 @@
 using System.Text;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using Sentinel.API.Common;
+using Sentinel.API.Middleware;
 using Sentinel.Application;
 using Sentinel.Infrastructure;
-using Sentinel.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 Env.Load();
@@ -61,6 +61,23 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ClockSkew = TimeSpan.Zero
         };
+
+        // Los endpoints con [Authorize] no lanzan excepción cuando falta el token:
+        // el challenge responde 401. Aquí lo formateamos igual que el resto de errores.
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.Headers["WWW-Authenticate"] = "Bearer";
+
+                await ProblemDetailsWriter.WriteAsync(
+                    context.HttpContext,
+                    401,
+                    "No autenticado",
+                    "Sin sesión activa o el access token venció. Renueva con /auth/refresh o inicia sesión.");
+            }
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -70,8 +87,7 @@ var app = builder.Build();
 // Migraciones al arrancar (P1). En producción se controla con MIGRATE_ON_START.
 if (builder.Configuration.GetValue("MIGRATE_ON_START", app.Environment.IsDevelopment()))
 {
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+    await app.Services.MigrarBaseDeDatosAsync();
 }
 
 if (app.Environment.IsDevelopment())
@@ -80,6 +96,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseCors("PoliticaCorsSentinel");
 app.UseAuthentication();
 app.UseAuthorization();
