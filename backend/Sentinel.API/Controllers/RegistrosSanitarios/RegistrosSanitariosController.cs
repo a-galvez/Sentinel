@@ -113,10 +113,16 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
                     });
             }
 
-            if (registro.TipoDocumentoId is not { } tipoDocId)
-                return Problema(400, "Datos inválidos", "El registro no tiene un documento asignado.");
+            if (registro.TipoDocumentoId is null)
+            {
+                return Problema(
+                    400,
+                    "Datos inválidos",
+                    "El registro no tiene documento asignado.");
+            }
 
-            var tipoDocumento = await _documentos.ObtenerTipoDocumentoAsync(tipoDocId, ct);
+            var tipoDocumento = await _documentos.ObtenerTipoDocumentoAsync(
+                registro.TipoDocumentoId.Value, ct);
 
             if (tipoDocumento is null)
             {
@@ -127,6 +133,7 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
             }
 
             var fechaEmision = request.FechaEmision.Value;
+
             var fechaVencimiento = fechaEmision.AddMonths(
                 tipoDocumento.VigenciaMeses);
 
@@ -139,24 +146,32 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
         }
         else
         {
-            if (registro.TipoDocumentoId is not { } tipoDocumentoId)
-                return Problema(400, "Datos inválidos", "El registro no tiene un documento asignado.");
+            if (registro.TipoDocumentoId is null)
+            {
+                return Problema(
+                    400,
+                    "Datos inválidos",
+                    "El registro no tiene documento asignado.");
+            }
 
             registro.Estado = EstadoVencimiento.EnTramite;
 
-            var ordenes = await _documentos.OrdenesDeDocumentoAsync(
-                tipoDocumentoId, CatalogoIds.TiposTramite.AltaProducto, ct);
+            // El motor ya no crea checklist: el caso de uso lo copia desde el documento.
+            var requisitos = await _documentos.RequisitosDeDocumentoAsync(
+                registro.TipoDocumentoId.Value,
+                CatalogoIds.TiposTramite.AltaProducto,
+                ct);
 
-            foreach (var (requisitoId, orden) in ordenes.OrderBy(o => o.Value))
+            foreach (var requisitoId in requisitos)
             {
                 _checklists.Agregar(new ChecklistRequisito
                 {
                     ChecklistRequisitoId = Guid.NewGuid(),
-                    EmpresaId = producto.EmpresaId,
+                    EmpresaId = _tenant.EmpresaId,
                     RequisitoId = requisitoId,
                     TipoTramiteId = CatalogoIds.TiposTramite.AltaProducto,
-                    ProductoId = producto.ProductoId,
-                    Orden = orden
+                    ProductoId = productoId,
+                    Estado = EstadoRequisito.Pendiente
                 });
             }
         }

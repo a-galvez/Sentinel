@@ -1,7 +1,5 @@
 using Sentinel.API.Controllers.Productos;
 using Sentinel.API.Controllers.RegistrosSanitarios;
-using Sentinel.Application.Abstractions;
-using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Application.Features.Productos.Validators;
 using Sentinel.Domain.Constantes;
 using Sentinel.Domain.Entities;
@@ -9,7 +7,6 @@ using Sentinel.Domain.Enums;
 using Sentinel.Infrastructure.Persistence;
 using Sentinel.Infrastructure.Repositories;
 using Sentinel.Infrastructure.Seeding;
-using Sentinel.Infrastructure.Services;
 using Sentinel.Tests.Builders;
 using Sentinel.Tests.Helpers;
 using Sentinel.Tests.Requisitos;
@@ -49,8 +46,7 @@ public abstract class ProductosTestBase
             new CrearProductoValidator(),
             new ProductoListadoValidator());
 
-    protected RegistrosSanitariosController CrearRegistrosController(
-        AppDbContext db)
+    protected RegistrosSanitariosController CrearRegistrosController(AppDbContext db)
         => new(
             new ProductoRepository(db),
             new RegistroSanitarioRepository(db),
