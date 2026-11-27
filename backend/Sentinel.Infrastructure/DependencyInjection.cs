@@ -6,7 +6,9 @@ using Sentinel.Application.Abstractions;
 using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Infrastructure.Persistence;
 using Sentinel.Infrastructure.Repositories;
+using Sentinel.Infrastructure.Seeding;
 using Sentinel.Infrastructure.Services;
+
 
 namespace Sentinel.Infrastructure;
 
@@ -37,8 +39,11 @@ public static class DependencyInjection
         s.AddScoped<IRegistroSanitarioRepository, RegistroSanitarioRepository>();
         s.AddScoped<IEmpresaRepository, EmpresaRepository>();
 
-        // Motor vacío hasta M6. RequisitosModule de P5 lo reemplaza (ver RequisitosModule).
-        s.AddScoped<IMotorRequisitos, MotorRequisitosVacio>();
+        s.AddScoped<IMotorRequisitos, MotorRequisitos>();
+        s.AddScoped<IEvaluaDependencias, EvaluadorDependencias>();
+
+        s.AddScoped<CatalogoSeeder>();
+        s.AddHostedService<CatalogoSeederHostedService>();
 
         return s;
     }

@@ -55,11 +55,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
             .HasForeignKey(l => l.EstablecimientoId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        mb.Entity<Producto>()
-            .HasOne<TipoDocumento>()
-            .WithMany()
-            .HasForeignKey(p => p.TipoDocumentoId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         mb.Entity<LicenciaSanitaria>()
             .HasOne<TipoDocumento>()
@@ -82,6 +77,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
         mb.Entity<RegistroSanitario>()
             .Property(r => r.Estado)
             .HasDefaultValue(EstadoVencimiento.NoVerificado);
+
+
+        mb.Entity<RegistroSanitario>()
+            .Property(r => r.Estado)
+            .HasDefaultValue(EstadoVencimiento.NoVerificado)
+            .HasSentinel(EstadoVencimiento.NoVerificado);
 
         mb.Entity<TipoDocumento>()
             .HasOne(t => t.AmbitoDocumento)
