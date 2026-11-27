@@ -23,10 +23,12 @@ public static class DependencyInjection
         s.AddSingleton<IClock, HondurasClock>();
         s.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 
+        // Implementaciones de puertos de Application que pertenecen a Infrastructure.
+        s.AddScoped<ITokenService, JwtTokenService>();
 
-        // Repositorios (patrón repositorio). Conviven con IAppDbContext hasta que los handlers
-        // estén migrados; luego se elimina IAppDbContext.
+        // Repositorios: Application define las interfaces y Infrastructure las implementa.
         s.AddScoped<IUnitOfWork, UnitOfWork>();
+        s.AddScoped<IEmpresaRepository, EmpresaRepository>();
         s.AddScoped<IUsuarioRepository, UsuarioRepository>();
         s.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         s.AddScoped<ICatalogoRepository, CatalogoRepository>();
@@ -35,7 +37,7 @@ public static class DependencyInjection
         s.AddScoped<ILicenciaRepository, LicenciaRepository>();
         s.AddScoped<IProductoRepository, ProductoRepository>();
 
-        // Motor vacío hasta M6. RequisitosModule de P5 lo reemplaza (ver RequisitosModule).
+        // Implementación vacía. P5 debe registrar la real cuando restaure su feature.
         s.AddScoped<IMotorRequisitos, MotorRequisitosVacio>();
 
         return s;

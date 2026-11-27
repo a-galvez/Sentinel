@@ -7,6 +7,6 @@ public sealed class LoginValidator : AbstractValidator<LoginRequest>
     public LoginValidator()
     {
         RuleFor(r => r.Correo).NotEmpty().EmailAddress();
-        RuleFor(r => r.Contrasena).NotEmpty();
+        RuleFor(r => r.Password).NotEmpty();
     }
 }
