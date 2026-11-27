@@ -5,8 +5,6 @@ namespace Sentinel.Tests.Productos;
 
 public class ProductoValidatorsTests
 {
-    // ... tests de H3 quedan igual ...
-
     [Fact]
     public void Listado_rechaza_pagina_y_tamano_invalidos()
     {
@@ -59,5 +57,116 @@ public class ProductoValidatorsTests
         var resultado = validator.Validate(request);
 
         Assert.True(resultado.IsValid);
+    }
+
+    [Fact]
+    public void Editar_acepta_solo_nombre()
+    {
+        var validator = new EditarProductoValidator();
+
+        var resultado = validator.Validate(
+            new EditarProductoRequest { Nombre = "Paracetamol" });
+
+        Assert.True(resultado.IsValid);
+    }
+
+    [Fact]
+    public void Editar_rechaza_nombre_vacio()
+    {
+        var validator = new EditarProductoValidator();
+
+        var resultado = validator.Validate(
+            new EditarProductoRequest { Nombre = "   " });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(EditarProductoRequest.Nombre));
+    }
+
+    [Fact]
+    public void Editar_rechaza_nombre_largo()
+    {
+        var validator = new EditarProductoValidator();
+
+        var resultado = validator.Validate(
+            new EditarProductoRequest { Nombre = new string('a', 201) });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(EditarProductoRequest.Nombre));
+    }
+
+    [Fact]
+    public void Editar_rechaza_categoria_no_positiva()
+    {
+        var validator = new EditarProductoValidator();
+
+        var resultado = validator.Validate(
+            new EditarProductoRequest { CategoriaProductoId = 0 });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(EditarProductoRequest.CategoriaProductoId));
+    }
+
+    [Fact]
+    public void Emision_acepta_numero_y_fecha()
+    {
+        var validator = new EmisionRegistroValidator();
+
+        var resultado = validator.Validate(new EmisionRequest
+        {
+            Numero = "RS-001",
+            FechaEmision = new DateOnly(2026, 10, 15)
+        });
+
+        Assert.True(resultado.IsValid);
+    }
+
+    [Fact]
+    public void Emision_rechaza_sin_numero()
+    {
+        var validator = new EmisionRegistroValidator();
+
+        var resultado = validator.Validate(new EmisionRequest
+        {
+            Numero = "  ",
+            FechaEmision = new DateOnly(2026, 10, 15)
+        });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(EmisionRequest.Numero));
+    }
+
+    [Fact]
+    public void Emision_rechaza_sin_fecha()
+    {
+        var validator = new EmisionRegistroValidator();
+
+        var resultado = validator.Validate(new EmisionRequest
+        {
+            Numero = "RS-001"
+        });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(EmisionRequest.FechaEmision));
+    }
+
+    [Fact]
+    public void Emision_rechaza_numero_largo()
+    {
+        var validator = new EmisionRegistroValidator();
+
+        var resultado = validator.Validate(new EmisionRequest
+        {
+            Numero = new string('n', 101),
+            FechaEmision = new DateOnly(2026, 10, 15)
+        });
+
+        Assert.False(resultado.IsValid);
+        Assert.Contains(resultado.Errors,
+            e => e.PropertyName == nameof(EmisionRequest.Numero));
     }
 }
