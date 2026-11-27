@@ -379,11 +379,11 @@ paths:
                 tipos:
                   summary: Tipos de establecimiento
                   value:
-                  - id: 00000000-0000-4000-8000-000000000111
+                  - id: 1
                     nombre: Farmacia
-                  - id: 00000000-0000-4000-8000-000000000112
+                  - id: 3
                     nombre: Droguería
-                  - id: 00000000-0000-4000-8000-000000000113
+                  - id: 2
                     nombre: Bodega
         '401':
           $ref: '#/components/responses/NoAutenticado'
@@ -459,7 +459,7 @@ paths:
                         registroId: 00000000-0000-4000-8000-000000000401
                         productoId: 00000000-0000-4000-8000-000000000201
                         tipoDocumento:
-                          tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                          tipoDocumentoId: 1
                           codigo: REG-MED
                           nombre: Registro de medicamento
                           autoridadEmisora: ARSA
@@ -480,7 +480,7 @@ paths:
                         registroId: 00000000-0000-4000-8000-000000000402
                         productoId: 00000000-0000-4000-8000-000000000202
                         tipoDocumento:
-                          tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                          tipoDocumentoId: 1
                           codigo: REG-MED
                           nombre: Registro de medicamento
                           autoridadEmisora: ARSA
@@ -558,7 +558,7 @@ paths:
                         registroId: 00000000-0000-4000-8000-000000000401
                         productoId: 00000000-0000-4000-8000-000000000201
                         tipoDocumento:
-                          tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                          tipoDocumentoId: 1
                           codigo: REG-MED
                           nombre: Registro de medicamento
                           autoridadEmisora: ARSA
@@ -629,7 +629,7 @@ paths:
                       registroId: 00000000-0000-4000-8000-000000000401
                       productoId: 00000000-0000-4000-8000-000000000201
                       tipoDocumento:
-                        tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                        tipoDocumentoId: 1
                         codigo: REG-MED
                         nombre: Registro de medicamento
                         autoridadEmisora: ARSA
@@ -694,7 +694,7 @@ paths:
                       registroId: 00000000-0000-4000-8000-000000000401
                       productoId: 00000000-0000-4000-8000-000000000201
                       tipoDocumento:
-                        tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                        tipoDocumentoId: 1
                         codigo: REG-MED
                         nombre: Registro de medicamento
                         autoridadEmisora: ARSA
@@ -786,7 +786,7 @@ paths:
                     registroId: 00000000-0000-4000-8000-000000000401
                     productoId: 00000000-0000-4000-8000-000000000201
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      tipoDocumentoId: 1
                       codigo: REG-MED
                       nombre: Registro de medicamento
                       autoridadEmisora: ARSA
@@ -804,7 +804,7 @@ paths:
                     registroId: 00000000-0000-4000-8000-000000000401
                     productoId: 00000000-0000-4000-8000-000000000201
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      tipoDocumentoId: 1
                       codigo: REG-MED
                       nombre: Registro de medicamento
                       autoridadEmisora: ARSA
@@ -869,7 +869,7 @@ paths:
                     registroId: 00000000-0000-4000-8000-000000000401
                     productoId: 00000000-0000-4000-8000-000000000201
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      tipoDocumentoId: 1
                       codigo: REG-MED
                       nombre: Registro de medicamento
                       autoridadEmisora: ARSA
@@ -1003,7 +1003,7 @@ paths:
                     registroId: 00000000-0000-4000-8000-000000000401
                     productoId: 00000000-0000-4000-8000-000000000201
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      tipoDocumentoId: 1
                       codigo: REG-MED
                       nombre: Registro de medicamento
                       autoridadEmisora: ARSA
@@ -1021,7 +1021,7 @@ paths:
                     registroId: 00000000-0000-4000-8000-000000000401
                     productoId: 00000000-0000-4000-8000-000000000201
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      tipoDocumentoId: 1
                       codigo: REG-MED
                       nombre: Registro de medicamento
                       autoridadEmisora: ARSA
@@ -1126,14 +1126,14 @@ paths:
                     - establecimientoId: 00000000-0000-4000-8000-000000000501
                       nombre: Bodega Principal
                       tipo:
-                        id: 00000000-0000-4000-8000-000000000112
+                        id: 3
                         nombre: Droguería
                       ubicacion: Tegucigalpa, Col. Palmira
                       licencia:
                         licenciaId: 00000000-0000-4000-8000-000000000411
                         establecimientoId: 00000000-0000-4000-8000-000000000501
                         tipoDocumento:
-                          tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                          tipoDocumentoId: 3
                           codigo: LIC-DROG
                           nombre: Licencia de droguería
                           autoridadEmisora: ARSA
@@ -1148,7 +1148,7 @@ paths:
                     - establecimientoId: 00000000-0000-4000-8000-000000000502
                       nombre: Bodega Sur
                       tipo:
-                        id: 00000000-0000-4000-8000-000000000113
+                        id: 2
                         nombre: Bodega
                       ubicacion: Tegucigalpa, Col. Palmira
                       licencia: null
@@ -1190,7 +1190,7 @@ paths:
                 summary: Droguería
                 value:
                   nombre: Bodega Principal
-                  tipoEstablecimientoId: 00000000-0000-4000-8000-000000000112
+                  tipoEstablecimientoId: 3
                   ubicacion: Tegucigalpa, Col. Palmira
       responses:
         '201':
@@ -1207,14 +1207,14 @@ paths:
                       establecimientoId: 00000000-0000-4000-8000-000000000501
                       nombre: Bodega Principal
                       tipo:
-                        id: 00000000-0000-4000-8000-000000000112
+                        id: 3
                         nombre: Droguería
                       ubicacion: Tegucigalpa, Col. Palmira
                       licencia:
                         licenciaId: 00000000-0000-4000-8000-000000000411
                         establecimientoId: 00000000-0000-4000-8000-000000000501
                         tipoDocumento:
-                          tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                          tipoDocumentoId: 3
                           codigo: LIC-DROG
                           nombre: Licencia de droguería
                           autoridadEmisora: ARSA
@@ -1233,7 +1233,7 @@ paths:
                       establecimientoId: 00000000-0000-4000-8000-000000000502
                       nombre: Bodega Sur
                       tipo:
-                        id: 00000000-0000-4000-8000-000000000113
+                        id: 2
                         nombre: Bodega
                       ubicacion: Tegucigalpa, Col. Palmira
                       licencia: null
@@ -1282,14 +1282,14 @@ paths:
                     establecimientoId: 00000000-0000-4000-8000-000000000501
                     nombre: Bodega Principal
                     tipo:
-                      id: 00000000-0000-4000-8000-000000000112
+                      id: 3
                       nombre: Droguería
                     ubicacion: Tegucigalpa, Col. Palmira
                     licencia:
                       licenciaId: 00000000-0000-4000-8000-000000000411
                       establecimientoId: 00000000-0000-4000-8000-000000000501
                       tipoDocumento:
-                        tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                        tipoDocumentoId: 3
                         codigo: LIC-DROG
                         nombre: Licencia de droguería
                         autoridadEmisora: ARSA
@@ -1374,7 +1374,7 @@ paths:
                         establecimientoId: 00000000-0000-4000-8000-000000000501
                         nombre: Bodega Principal
                       tipoDocumento:
-                        tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                        tipoDocumentoId: 3
                         codigo: LIC-DROG
                         nombre: Licencia de droguería
                         autoridadEmisora: ARSA
@@ -1426,7 +1426,7 @@ paths:
                     licenciaId: 00000000-0000-4000-8000-000000000411
                     establecimientoId: 00000000-0000-4000-8000-000000000501
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      tipoDocumentoId: 3
                       codigo: LIC-DROG
                       nombre: Licencia de droguería
                       autoridadEmisora: ARSA
@@ -1444,7 +1444,7 @@ paths:
                     licenciaId: 00000000-0000-4000-8000-000000000411
                     establecimientoId: 00000000-0000-4000-8000-000000000501
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      tipoDocumentoId: 3
                       codigo: LIC-DROG
                       nombre: Licencia de droguería
                       autoridadEmisora: ARSA
@@ -1508,7 +1508,7 @@ paths:
                     licenciaId: 00000000-0000-4000-8000-000000000411
                     establecimientoId: 00000000-0000-4000-8000-000000000501
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      tipoDocumentoId: 3
                       codigo: LIC-DROG
                       nombre: Licencia de droguería
                       autoridadEmisora: ARSA
@@ -1625,7 +1625,7 @@ paths:
                     licenciaId: 00000000-0000-4000-8000-000000000411
                     establecimientoId: 00000000-0000-4000-8000-000000000501
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      tipoDocumentoId: 3
                       codigo: LIC-DROG
                       nombre: Licencia de droguería
                       autoridadEmisora: ARSA
@@ -1643,7 +1643,7 @@ paths:
                     licenciaId: 00000000-0000-4000-8000-000000000411
                     establecimientoId: 00000000-0000-4000-8000-000000000501
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      tipoDocumentoId: 3
                       codigo: LIC-DROG
                       nombre: Licencia de droguería
                       autoridadEmisora: ARSA
@@ -1737,7 +1737,7 @@ paths:
                     origen: Registro
                     origenId: 00000000-0000-4000-8000-000000000401
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                      tipoDocumentoId: 1
                       codigo: REG-MED
                       nombre: Registro de medicamento
                       autoridadEmisora: ARSA
@@ -1749,7 +1749,7 @@ paths:
                     bloqueo:
                       bloqueado: true
                       faltantes:
-                      - tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      - tipoDocumentoId: 3
                         codigo: LIC-DROG
                         nombre: Licencia de droguería
                         autoridadEmisora: ARSA
@@ -1855,7 +1855,7 @@ paths:
                     origen: Licencia
                     origenId: 00000000-0000-4000-8000-000000000411
                     tipoDocumento:
-                      tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                      tipoDocumentoId: 3
                       codigo: LIC-DROG
                       nombre: Licencia de droguería
                       autoridadEmisora: ARSA
@@ -2155,7 +2155,7 @@ paths:
                       registroId: 00000000-0000-4000-8000-000000000401
                       productoId: 00000000-0000-4000-8000-000000000201
                       tipoDocumento:
-                        tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                        tipoDocumentoId: 1
                         codigo: REG-MED
                         nombre: Registro de medicamento
                         autoridadEmisora: ARSA
@@ -2171,7 +2171,7 @@ paths:
                       origen: Registro
                       origenId: 00000000-0000-4000-8000-000000000401
                       tipoDocumento:
-                        tipoDocumentoId: 00000000-0000-4000-8000-000000000301
+                        tipoDocumentoId: 1
                         codigo: REG-MED
                         nombre: Registro de medicamento
                         autoridadEmisora: ARSA
@@ -2183,7 +2183,7 @@ paths:
                       bloqueo:
                         bloqueado: true
                         faltantes:
-                        - tipoDocumentoId: 00000000-0000-4000-8000-000000000302
+                        - tipoDocumentoId: 3
                           codigo: LIC-DROG
                           nombre: Licencia de droguería
                           autoridadEmisora: ARSA
@@ -2375,7 +2375,7 @@ components:
       type: object
       required: [id, nombre]
       properties:
-        id: { type: string, format: uuid }
+        id: { type: integer }
         nombre: { type: string }
 
     EstadoCatalogoItem:
@@ -2473,7 +2473,7 @@ components:
       description: Documento que el motor asignó a un registro o licencia.
       required: [tipoDocumentoId, codigo, nombre, vigenciaMeses]
       properties:
-        tipoDocumentoId: { type: string, format: uuid }
+        tipoDocumentoId: { type: integer }
         codigo: { type: string }
         nombre: { type: string }
         autoridadEmisora: { type: string, example: ARSA }
@@ -2587,7 +2587,7 @@ components:
       required: [nombre, tipoEstablecimientoId, ubicacion]
       properties:
         nombre: { type: string, maxLength: 200, example: Bodega Principal }
-        tipoEstablecimientoId: { type: string, format: uuid }
+        tipoEstablecimientoId: { type: integer }
         ubicacion: { type: string, maxLength: 300 }
 
     LicenciaSanitaria:
