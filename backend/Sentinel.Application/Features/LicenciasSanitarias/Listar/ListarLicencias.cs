@@ -18,6 +18,8 @@ public sealed class ListarLicencias(
         var hoy = clock.HoyHonduras;
 
         // El validator ya garantizó que el texto es un nombre válido del enum.
+        // Dependencia P2: GET /catalogos/estados-vencimiento aún no existe y el frontend
+        // lo necesita para el selector de filtro. Ver Docs/sentinel-p4-pendientes.md.
         EstadoVencimiento? estado = request.Estado is null
             ? null
             : Enum.Parse<EstadoVencimiento>(request.Estado);
@@ -35,6 +37,8 @@ public sealed class ListarLicencias(
                 listaLicencias.Select(l => l.TipoDocumentoId!.Value).Distinct().ToList(), ct))
             .ToDictionary(t => t.TipoDocumentoId);
 
+        // TODO(H11): mantener este flag alineado con el GET de checklist cuando exista
+        // (incluido soft-delete del checklist, si P5 lo agrega). Ver Docs/sentinel-p4-pendientes.md.
         var licenciasConChecklist = await checklists.LicenciaIdsConChecklistAsync(
             listaLicencias.Select(l => l.LicenciaSanitariaId).ToList(), ct);
 

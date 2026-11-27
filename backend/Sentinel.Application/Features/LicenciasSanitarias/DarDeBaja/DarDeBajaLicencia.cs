@@ -21,6 +21,11 @@ public sealed class DarDeBajaLicencia(
         if (licencia?.TipoDocumentoId is null)
             throw new NotFoundException(MensajeNoEncontrado);
 
+        // TODO(H11): el checklist de la licencia no se marca como dado de baja porque
+        // ChecklistRequisito no implementa ISoftDelete. El endpoint de checklist (P5) debe
+        // devolver 404 si la licencia/establecimiento están dados de baja, o agregar soft-delete.
+        // Ver Docs/sentinel-p4-pendientes.md.
+
         // Solo la licencia: el establecimiento no se da de baja.
         licencia.DadoDeBaja = true;
 

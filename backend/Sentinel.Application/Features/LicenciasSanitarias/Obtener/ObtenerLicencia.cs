@@ -27,6 +27,8 @@ public sealed class ObtenerLicencia(
         var tipoDocumento = await documentos.ObtenerTipoDocumentoAsync(tipoDocumentoId, ct)
             ?? throw new InvalidOperationException($"La licencia apunta a un tipo de documento inexistente ({tipoDocumentoId}).");
 
+        // TODO(H11): mantener este flag alineado con el GET de checklist cuando exista.
+        // Ver Docs/sentinel-p4-pendientes.md.
         var tieneChecklist = await checklists.ExisteParaLicenciaAsync(licencia.LicenciaSanitariaId, ct);
 
         return licencia.ToDto(tipoDocumento, tieneChecklist, clock.HoyHonduras);

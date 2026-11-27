@@ -1,6 +1,7 @@
 using Sentinel.Application.Abstractions;
 using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Application.Common.Exceptions;
+using Sentinel.Domain.Calculos;
 
 namespace Sentinel.Application.Features.LicenciasSanitarias.RegistrarEmision;
 
@@ -35,6 +36,11 @@ public sealed class RegistrarEmisionLicencia(
         licencia.NumeroLicencia = request.Numero.Trim();
         licencia.FechaEmision = fechaEmision;
         licencia.FechaVencimiento = fechaEmision.AddMonths(tipoDocumento.VigenciaMeses);
+        // Mantener el Estado guardado alineado con las fechas: el checklist (P5) queda en solo
+        // lectura (409) al salir de EnTramite y las dependencias se desbloquean si queda vigente.
+        // Ver Docs/sentinel-p4-pendientes.md.
+        licencia.Estado = EstadoVencimientoCalculator.Calcular(
+            licencia.FechaVencimiento.Value, clock.HoyHonduras);
 
         await unitOfWork.SaveChangesAsync(ct);
 

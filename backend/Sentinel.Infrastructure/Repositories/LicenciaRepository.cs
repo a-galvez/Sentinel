@@ -106,7 +106,9 @@ public async Task<IEnumerable<LicenciaSanitaria>> GetPagedAsync(
             EstadoVencimiento.Vencido => consulta.Where(l => l.FechaVencimiento < hoy),
             EstadoVencimiento.PorVencer => consulta.Where(l => l.FechaVencimiento >= hoy && l.FechaVencimiento <= limite),
             EstadoVencimiento.Vigente => consulta.Where(l => l.FechaVencimiento > limite),
-            _ => consulta.Where(l => l.Estado == estado)   // NoVerificado y EnTramite: estado guardado
+            // NoVerificado y EnTramite no tienen fechas. Exigir FechaVencimiento nula evita
+            // que una licencia ya emitida (con fechas) aparezca por un Estado guardado obsoleto.
+            _ => consulta.Where(l => l.FechaVencimiento == null && l.Estado == estado)
         };
     }
 }

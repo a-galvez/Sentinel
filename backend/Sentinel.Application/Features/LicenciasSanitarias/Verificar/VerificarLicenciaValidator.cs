@@ -6,11 +6,11 @@ public sealed class VerificarLicenciaValidator : AbstractValidator<VerificarLice
 {
     public VerificarLicenciaValidator()
     {
-        RuleFor(r => r.TieneLicencia)
+        RuleFor(r => r.TieneDocumento)
             .NotNull().WithMessage("Indique si el establecimiento ya tiene la licencia.");
 
         // "Sí": número y emisión van juntos.
-        When(r => r.TieneLicencia == true, () =>
+        When(r => r.TieneDocumento == true, () =>
         {
             RuleFor(r => r.Numero)
                 .NotEmpty().WithMessage("El número de licencia es obligatorio.")
@@ -20,7 +20,7 @@ public sealed class VerificarLicenciaValidator : AbstractValidator<VerificarLice
         });
 
         // "No": no se aceptan datos de la licencia.
-        When(r => r.TieneLicencia == false, () =>
+        When(r => r.TieneDocumento == false, () =>
         {
             RuleFor(r => r.Numero).Empty().WithMessage("No envíe número si la licencia no existe.");
             RuleFor(r => r.FechaEmision).Null().WithMessage("No envíe fecha si la licencia no existe.");
