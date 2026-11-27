@@ -282,4 +282,20 @@ public class ProductosController : ProductosApiControllerBase
 
         return Ok(dto);
     }
+
+    [HttpDelete("{productoId:guid}")]
+    public async Task<IActionResult> DarDeBaja(
+        Guid productoId,
+        CancellationToken ct)
+    {
+        var producto = await _productos.ObtenerAsync(productoId, ct);
+        if (producto is null)
+            return Problema(404, "No encontrado", "Producto no encontrado.");
+
+        producto.DadoDeBaja = true;
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
 }
