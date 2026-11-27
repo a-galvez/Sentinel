@@ -30,7 +30,7 @@ public sealed class EstablecimientoRepository(AppDbContext db) : IEstablecimient
     public Task<Establecimiento?> ObtenerParaModificarAsync(Guid establecimientoId, CancellationToken ct)
     => db.Establecimientos
         .SingleOrDefaultAsync(e => e.EstablecimientoId == establecimientoId, ct);
-    
+
     public async Task<IEnumerable<Establecimiento>> GetByIdsAsync(IReadOnlyList<Guid> establecimientoIds, CancellationToken ct)
     {
         if (establecimientoIds.Count == 0) return [];

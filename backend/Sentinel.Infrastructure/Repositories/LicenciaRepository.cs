@@ -79,15 +79,15 @@ public sealed class LicenciaRepository(AppDbContext db) : ILicenciaRepository
     public Task<int> CountAsync(EstadoVencimiento? estado, DateOnly hoy, CancellationToken ct)
     => Filtrar(estado, hoy).CountAsync(ct);
 
-public async Task<IEnumerable<LicenciaSanitaria>> GetPagedAsync(
-    EstadoVencimiento? estado, DateOnly hoy, int pagina, int tamanoPagina, CancellationToken ct)
-    => await Filtrar(estado, hoy)
-        .AsNoTracking()
-        .OrderBy(l => l.FechaVencimiento)
-        .ThenBy(l => l.LicenciaSanitariaId)
-        .Skip((pagina - 1) * tamanoPagina)
-        .Take(tamanoPagina)
-        .ToListAsync(ct);
+    public async Task<IEnumerable<LicenciaSanitaria>> GetPagedAsync(
+        EstadoVencimiento? estado, DateOnly hoy, int pagina, int tamanoPagina, CancellationToken ct)
+        => await Filtrar(estado, hoy)
+            .AsNoTracking()
+            .OrderBy(l => l.FechaVencimiento)
+            .ThenBy(l => l.LicenciaSanitariaId)
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToListAsync(ct);
 
     //los rangos de fecha replican EstadoVencimientoCalculator.Calcular, para que el filtro y el estado que se muestra nunca se contradigan.
     private IQueryable<LicenciaSanitaria> Filtrar(EstadoVencimiento? estado, DateOnly hoy)
