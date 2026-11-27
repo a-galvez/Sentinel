@@ -77,11 +77,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
 
         mb.Entity<RegistroSanitario>()
             .Property(r => r.Estado)
-            .HasDefaultValue(EstadoVencimiento.NoVerificado);
-
-
-        mb.Entity<RegistroSanitario>()
-            .Property(r => r.Estado)
             .HasDefaultValue(EstadoVencimiento.NoVerificado)
             .HasSentinel(EstadoVencimiento.NoVerificado);
 

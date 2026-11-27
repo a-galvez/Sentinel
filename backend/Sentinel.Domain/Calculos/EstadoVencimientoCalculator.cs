@@ -26,4 +26,10 @@ public static class EstadoVencimientoCalculator
 
         return fechaVencimiento is null ? estado : Calcular(fechaVencimiento.Value, hoy);
     }
+
+    public static EstadoVencimiento Resolver(EstadoVencimiento almacenado, DateOnly? vencimiento, DateOnly hoy)
+    => vencimiento is { } fecha ? Calcular(fecha, hoy) : almacenado;
+
+    public static int? DiasRestantes(DateOnly? vencimiento, DateOnly hoy)
+        => vencimiento is { } fecha ? DiasRestantes(fecha, hoy) : null;
 }

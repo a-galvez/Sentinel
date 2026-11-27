@@ -16,4 +16,6 @@ public interface IChecklistRepository
     Task<bool> ExisteParaLicenciaAsync(Guid licenciaId, CancellationToken ct);
 
     void Agregar(ChecklistRequisito fila);
+
+    Task<HashSet<Guid>> LicenciaIdsConChecklistAsync(IReadOnlyList<Guid> licenciaIds, CancellationToken ct);
 }

@@ -23,7 +23,7 @@ erDiagram
     ESTABLECIMIENTO {
         guid EstablecimientoId PK
         guid EmpresaId FK "Multi-tenant"
-        guid TipoEstablecimientoId FK
+        int TipoEstablecimientoId FK
         string Nombre
         string Ubicacion
         boolean DadoDeBaja "Baja logica"
@@ -32,8 +32,8 @@ erDiagram
         guid LicenciaId PK
         guid EstablecimientoId FK "Una por establecimiento"
         guid EmpresaId FK "Multi-tenant"
-        guid TipoDocumentoId FK "Asignado por el motor"
-        guid EstadoVencimientoId FK "En tramite, Vigente, Por vencer, Vencido"
+        int TipoDocumentoId FK "Asignado por el motor"
+        int EstadoVencimientoId FK "En tramite, Vigente, Por vencer, Vencido"
         string NumeroLicencia "Null hasta emitirse"
         date FechaEmision "Null hasta emitirse"
         date FechaVencimiento "Null hasta emitirse. Emision + VigenciaMeses"

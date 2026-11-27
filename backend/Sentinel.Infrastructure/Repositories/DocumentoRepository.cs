@@ -24,6 +24,17 @@ public sealed class DocumentoRepository(AppDbContext db) : IDocumentoRepository
 
     public void AgregarTipoDocumento(TipoDocumento entidad) => db.TiposDocumento.Add(entidad);
 
+    public async Task<List<TipoDocumento>> ObtenerTiposDocumentoAsync(IReadOnlyList<int> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0) return [];
+
+        var distintos = ids.Distinct().ToList();
+        return await db.TiposDocumento
+            .AsNoTracking()
+            .Where(t => distintos.Contains(t.TipoDocumentoId))
+            .ToListAsync(ct);
+    }
+
     // ---------- Requisito ----------
 
     public Task<Requisito?> ObtenerRequisitoAsync(int id, CancellationToken ct)

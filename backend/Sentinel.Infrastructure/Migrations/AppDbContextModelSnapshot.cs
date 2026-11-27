@@ -196,14 +196,16 @@ namespace Sentinel.Infrastructure.Migrations
                     b.Property<Guid>("EstablecimientoId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateOnly>("FechaEmision")
+                    b.Property<int>("Estado")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("FechaEmision")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly>("FechaVencimiento")
+                    b.Property<DateOnly?>("FechaVencimiento")
                         .HasColumnType("date");
 
                     b.Property<string>("NumeroLicencia")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int?>("TipoDocumentoId")
