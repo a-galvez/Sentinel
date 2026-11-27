@@ -292,4 +292,30 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
 
         return Ok(registroDto);
     }
+
+    [HttpDelete]
+    public async Task<IActionResult> DarDeBaja(
+        Guid productoId,
+        CancellationToken ct)
+    {
+        var producto = await _productos.ObtenerAsync(productoId, ct);
+        if (producto is null)
+            return Problema(404, "No encontrado", "Producto no encontrado.");
+
+        var registro = await _registros.ObtenerPorProductoAsync(productoId, ct);
+        if (registro is null)
+        {
+            return Problema(
+                404,
+                "No encontrado",
+                "El producto no existe o no tiene registro sanitario.");
+        }
+
+        registro.DadoDeBaja = true;
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
+
 }
