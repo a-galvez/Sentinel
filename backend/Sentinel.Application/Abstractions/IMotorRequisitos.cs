@@ -4,7 +4,9 @@ namespace Sentinel.Application.Abstractions;
 
 public interface IMotorRequisitos
 {
-    // No llaman SaveChanges: dejan el TipoDocumento y el checklist en el DbContext.
-    Task AplicarAProductoAsync(Producto producto, CancellationToken ct);
-    Task AplicarALicenciaAsync(LicenciaSanitaria licencia, CancellationToken ct);
+    Task AsignarDocumentoAlProductoAsync(Producto producto, CancellationToken ct);
+    Task AsignarDocumentoALicenciaAsync(LicenciaSanitaria licenciaSanitaria, CancellationToken ct);
+
+    Task CrearChecklistDeProductoAsync(Producto producto, CancellationToken ct);
+    Task CrearChecklistDeLicenciaAsync(LicenciaSanitaria licenciaSanitaria, CancellationToken ct);
 }
