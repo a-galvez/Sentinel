@@ -8,7 +8,131 @@ namespace Sentinel.Tests.Productos;
 
 public class ProductosControllerTests : ProductosTestBase
 {
-    // ... los 4 tests de creación de H3 quedan igual ...
+    [Fact]
+    public async Task Crear_devuelve_201_y_registro_no_verificado()
+    {
+        await using var db = await CrearBaseAsync();
+        var controller = CrearProductosController(db);
+
+        var result = await controller.Crear(
+            new CrearProductoRequest
+            {
+                Nombre = "Paracetamol 500 mg",
+                CategoriaProductoId = CatalogoIds.CategoriasProducto.Medicamento
+            },
+            default);
+
+        var created = Assert.IsType<CreatedResult>(result);
+        Assert.Equal(201, created.StatusCode);
+
+        var response = Assert.IsType<CrearProductoResponse>(created.Value);
+        Assert.Null(response.Mensaje);
+        Assert.Equal(
+            $"/api/v1/productos/{response.Producto.ProductoId}",
+            created.Location);
+
+        var registro = response.Producto.Registro;
+        Assert.NotNull(registro);
+        Assert.Equal("NoVerificado", registro!.Estado);
+        Assert.True(registro.RequiereVerificacion);
+        Assert.False(registro.TieneChecklist);
+
+        Assert.Equal(1, await db.RegistrosSanitarios.CountAsync());
+        Assert.Equal(0, await db.ChecklistRequisitos.CountAsync());
+    }
+
+    [Fact]
+    public async Task Crear_recorta_el_nombre()
+    {
+        await using var db = await CrearBaseAsync();
+        var controller = CrearProductosController(db);
+
+        var result = await controller.Crear(
+            new CrearProductoRequest
+            {
+                Nombre = "  Ibuprofeno 400 mg  ",
+                CategoriaProductoId = CatalogoIds.CategoriasProducto.Medicamento
+            },
+            default);
+
+        var created = Assert.IsType<CreatedResult>(result);
+        var response = Assert.IsType<CrearProductoResponse>(created.Value);
+
+        Assert.Equal("Ibuprofeno 400 mg", response.Producto.Nombre);
+
+        var guardado = await db.Productos.SingleAsync();
+        Assert.Equal("Ibuprofeno 400 mg", guardado.Nombre);
+    }
+
+    [Fact]
+    public async Task Crear_sin_regla_devuelve_201_con_mensaje_y_sin_registro()
+    {
+        await using var db = await CrearBaseAsync();
+        var controller = CrearProductosController(db);
+
+        var result = await controller.Crear(
+            new CrearProductoRequest
+            {
+                Nombre = "Crema hidratante",
+                CategoriaProductoId = CatalogoIds.CategoriasProducto.Cosmetico
+            },
+            default);
+
+        var created = Assert.IsType<CreatedResult>(result);
+        Assert.Equal(201, created.StatusCode);
+
+        var response = Assert.IsType<CrearProductoResponse>(created.Value);
+        Assert.NotNull(response.Mensaje);
+        Assert.Null(response.Producto.Registro);
+
+        Assert.Equal(0, await db.RegistrosSanitarios.CountAsync());
+        Assert.Equal(0, await db.ChecklistRequisitos.CountAsync());
+    }
+
+    [Fact]
+    public async Task Crear_categoria_inexistente_devuelve_400()
+    {
+        await using var db = await CrearBaseAsync();
+        var controller = CrearProductosController(db);
+
+        var result = await controller.Crear(
+            new CrearProductoRequest
+            {
+                Nombre = "Producto raro",
+                CategoriaProductoId = 99
+            },
+            default);
+
+        var bad = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, bad.StatusCode);
+
+        var problem = Assert.IsType<ProblemDetails>(bad.Value);
+        var errors = Assert.IsType<Dictionary<string, string[]>>(
+            problem.Extensions["errors"]);
+        Assert.Contains("categoriaProductoId", errors.Keys);
+
+        Assert.Equal(0, await db.Productos.CountAsync());
+    }
+
+    [Fact]
+    public async Task Crear_sin_nombre_devuelve_400()
+    {
+        await using var db = await CrearBaseAsync();
+        var controller = CrearProductosController(db);
+
+        var result = await controller.Crear(
+            new CrearProductoRequest
+            {
+                Nombre = "   ",
+                CategoriaProductoId = CatalogoIds.CategoriasProducto.Medicamento
+            },
+            default);
+
+        var bad = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, bad.StatusCode);
+
+        Assert.Equal(0, await db.Productos.CountAsync());
+    }
 
     [Fact]
     public async Task Listar_devuelve_pagina_con_total()
