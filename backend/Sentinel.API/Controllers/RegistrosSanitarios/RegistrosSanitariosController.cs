@@ -8,6 +8,8 @@ using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Application.Features.Productos.DTOs;
 using Sentinel.Application.Features.Productos.Mappers;
 using Sentinel.Domain.Calculos;
+using Sentinel.Domain.Constantes;
+using Sentinel.Domain.Entities;
 using Sentinel.Domain.Enums;
 
 namespace Sentinel.API.Controllers.RegistrosSanitarios;
@@ -22,7 +24,6 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
     private readonly IRegistroSanitarioRepository _registros;
     private readonly IDocumentoRepository _documentos;
     private readonly IChecklistRepository _checklists;
-    private readonly IMotorRequisitos _motor;
     private readonly ICurrentTenant _tenant;
     private readonly IClock _clock;
     private readonly IUnitOfWork _unitOfWork;
@@ -33,7 +34,6 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
         IRegistroSanitarioRepository registros,
         IDocumentoRepository documentos,
         IChecklistRepository checklists,
-        IMotorRequisitos motor,
         ICurrentTenant tenant,
         IClock clock,
         IUnitOfWork unitOfWork,
@@ -43,7 +43,6 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
         _registros = registros;
         _documentos = documentos;
         _checklists = checklists;
-        _motor = motor;
         _tenant = tenant;
         _clock = clock;
         _unitOfWork = unitOfWork;
@@ -114,8 +113,10 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
                     });
             }
 
-            var tipoDocumento = await _documentos.ObtenerTipoDocumentoAsync(
-                registro.TipoDocumentoId, ct);
+            if (registro.TipoDocumentoId is not { } tipoDocId)
+                return Problema(400, "Datos inválidos", "El registro no tiene un documento asignado.");
+
+            var tipoDocumento = await _documentos.ObtenerTipoDocumentoAsync(tipoDocId, ct);
 
             if (tipoDocumento is null)
             {
@@ -138,10 +139,26 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
         }
         else
         {
+            if (registro.TipoDocumentoId is not { } tipoDocumentoId)
+                return Problema(400, "Datos inválidos", "El registro no tiene un documento asignado.");
+
             registro.Estado = EstadoVencimiento.EnTramite;
 
-            // P5 conecta el motor real. Copia los requisitos al checklist.
-            await _motor.AplicarAProductoAsync(producto, ct);
+            var ordenes = await _documentos.OrdenesDeDocumentoAsync(
+                tipoDocumentoId, CatalogoIds.TiposTramite.AltaProducto, ct);
+
+            foreach (var (requisitoId, orden) in ordenes.OrderBy(o => o.Value))
+            {
+                _checklists.Agregar(new ChecklistRequisito
+                {
+                    ChecklistRequisitoId = Guid.NewGuid(),
+                    EmpresaId = producto.EmpresaId,
+                    RequisitoId = requisitoId,
+                    TipoTramiteId = CatalogoIds.TiposTramite.AltaProducto,
+                    ProductoId = producto.ProductoId,
+                    Orden = orden
+                });
+            }
         }
 
         await _unitOfWork.SaveChangesAsync(ct);

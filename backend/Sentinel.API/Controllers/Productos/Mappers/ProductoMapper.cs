@@ -44,8 +44,9 @@ public static class ProductoMapper
         IClock clock,
         CancellationToken ct)
     {
-        var tipo = await documentos.ObtenerTipoDocumentoAsync(
-            registro.TipoDocumentoId, ct);
+        var tipo = registro.TipoDocumentoId is { } tipoDocumentoId
+        ? await documentos.ObtenerTipoDocumentoAsync(tipoDocumentoId, ct)
+        : null;
 
         var hoy = clock.HoyHonduras;
 

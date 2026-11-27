@@ -50,14 +50,12 @@ public abstract class ProductosTestBase
             new ProductoListadoValidator());
 
     protected RegistrosSanitariosController CrearRegistrosController(
-        AppDbContext db,
-        IMotorRequisitos? motor = null)
+        AppDbContext db)
         => new(
             new ProductoRepository(db),
             new RegistroSanitarioRepository(db),
             new DocumentoRepository(db),
             new ChecklistRepository(db),
-            motor ?? new MotorRequisitos(db),
             new FakeTenant(EmpresaId, UsuarioId),
             new RelojFijo(Hoy),
             new UnitOfWork(db),
