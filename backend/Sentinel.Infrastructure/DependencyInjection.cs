@@ -34,6 +34,7 @@ public static class DependencyInjection
         s.AddScoped<IChecklistRepository, ChecklistRepository>();
         s.AddScoped<ILicenciaRepository, LicenciaRepository>();
         s.AddScoped<IProductoRepository, ProductoRepository>();
+        s.AddScoped<IRegistroSanitarioRepository, RegistroSanitarioRepository>();
 
         // Motor vacío hasta M6. RequisitosModule de P5 lo reemplaza (ver RequisitosModule).
         s.AddScoped<IMotorRequisitos, MotorRequisitosVacio>();
