@@ -14,15 +14,14 @@ public sealed class CrearEstablecimientoController(
     IValidator<CrearEstablecimientoRequest> validator) : ControllerBase
 {
     [HttpPost]
-    [ProducesResponseType(typeof(EstablecimientoCreadoDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(EstablecimientoDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<EstablecimientoCreadoDto>> Crear(
-        [FromBody] CrearEstablecimientoRequest request,
-        CancellationToken ct)
+    public async Task<ActionResult<EstablecimientoDto>> Crear(
+        [FromBody] CrearEstablecimientoRequest request, CancellationToken ct)
     {
         await validator.ValidateAndThrowAsync(request, ct);
-        var response = await crear.ManejarAsync(request, ct);
-        return Created($"api/v1/establecimientos/{response.Establecimiento.EstablecimientoId}", response);
+        var dto = await crear.ManejarAsync(request, ct);
+        return Created($"api/v1/establecimientos/{dto.EstablecimientoId}", dto);
     }
 }

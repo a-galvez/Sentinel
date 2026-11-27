@@ -1,22 +1,20 @@
 using FluentValidation;
-using Sentinel.Application.Abstractions.Repositories;
 
 namespace Sentinel.Application.Features.Establecimientos.Crear;
 
 public sealed class CrearEstablecimientoValidator : AbstractValidator<CrearEstablecimientoRequest>
 {
-    public CrearEstablecimientoValidator(ICatalogoRepository catalogos)
+    public CrearEstablecimientoValidator()
     {
         RuleFor(r => r.Nombre)
-            .NotEmpty().WithMessage("El nombre del establecimiento es obligatorio.")
-            .MaximumLength(200).WithMessage("El nombre no puede superar 200 caracteres.");
+            .NotEmpty().WithMessage("El nombre es obligatorio.")
+            .MaximumLength(150);
 
         RuleFor(r => r.Ubicacion)
             .NotEmpty().WithMessage("La ubicación es obligatoria.")
-            .MaximumLength(300).WithMessage("La ubicación no puede superar 300 caracteres.");
+            .MaximumLength(250);
 
         RuleFor(r => r.TipoEstablecimientoId)
-            .MustAsync((id, ct) => catalogos.ExisteTipoEstablecimientoAsync(id, ct))
-            .WithMessage("El tipo de establecimiento no existe.");
+            .GreaterThan(0).WithMessage("El tipo de establecimiento es obligatorio.");
     }
 }

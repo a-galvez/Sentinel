@@ -2,6 +2,8 @@ using Sentinel.Application.Abstractions;
 using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Application.Common.Exceptions;
 using Sentinel.Domain.Calculos;
+using Sentinel.Domain.Constantes;
+using Sentinel.Domain.Entities;
 using Sentinel.Domain.Enums;
 
 namespace Sentinel.Application.Features.LicenciasSanitarias.Verificar;
@@ -11,7 +13,6 @@ public sealed class VerificarLicencia(
     ILicenciaRepository licencias,
     IChecklistRepository checklists,
     IDocumentoRepository documentos,
-    IMotorRequisitos motor,
     IUnitOfWork unitOfWork,
     IClock clock)
 {
@@ -28,7 +29,7 @@ public sealed class VerificarLicencia(
         if (licencia?.TipoDocumentoId is not { } tipoDocumentoId)
             throw new NotFoundException(MensajeNoEncontrado);
 
-        if (licencia.Estado != EstadoVencimiento.NoVerificado)                 // ← estado
+        if (licencia.Estado != EstadoVencimiento.NoVerificado)
             throw new ConflictException("La licencia ya fue verificada.");
 
         var tipoDocumento = await documentos.ObtenerTipoDocumentoAsync(tipoDocumentoId, ct)
@@ -48,11 +49,29 @@ public sealed class VerificarLicencia(
         }
         else
         {
-            licencia.Estado = EstadoVencimiento.EnTramite;                     // ← estado
+            licencia.Estado = EstadoVencimiento.EnTramite;
 
-            // Checklist solo cuando el usuario dice "no la tengo" (H6/H11). Sin duplicar.
+            // El motor ya no crea checklist: se copia aquí desde el documento. Sin duplicar.
             if (!await checklists.ExisteParaLicenciaAsync(licencia.LicenciaSanitariaId, ct))
-                await motor.AplicarALicenciaAsync(licencia, ct);
+            {
+                const int tramite = CatalogoIds.TiposTramite.AltaEstablecimiento;
+                var requisitos = await documentos.RequisitosDeDocumentoAsync(tipoDocumentoId, tramite, ct);
+                var ordenes = await documentos.OrdenesDeDocumentoAsync(tipoDocumentoId, tramite, ct);
+
+                foreach (var requisitoId in requisitos)
+                {
+                    checklists.Agregar(new ChecklistRequisito
+                    {
+                        ChecklistRequisitoId = Guid.NewGuid(),
+                        EmpresaId = licencia.EmpresaId,
+                        RequisitoId = requisitoId,
+                        TipoTramiteId = tramite,
+                        LicenciaSanitariaId = licencia.LicenciaSanitariaId,
+                        Estado = EstadoRequisito.Pendiente,
+                        Orden = ordenes.GetValueOrDefault(requisitoId)
+                    });
+                }
+            }
         }
 
         await unitOfWork.SaveChangesAsync(ct);   // un solo guardado: licencia + checklist
