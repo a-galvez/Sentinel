@@ -44,7 +44,8 @@ public abstract class ProductosTestBase
             new RelojFijo(Hoy),
             new UnitOfWork(db),
             new CrearProductoValidator(),
-            new ProductoListadoValidator());
+            new ProductoListadoValidator(),
+            new EditarProductoValidator());
 
     protected RegistrosSanitariosController CrearRegistrosController(AppDbContext db)
         => new(
@@ -55,7 +56,8 @@ public abstract class ProductosTestBase
             new FakeTenant(EmpresaId, UsuarioId),
             new RelojFijo(Hoy),
             new UnitOfWork(db),
-            new VerificarRegistroValidator());
+            new VerificarRegistroValidator(),
+            new EmisionRegistroValidator());
 
     protected Producto ProductoMedicamento()
         => ProductoBuilder.Crear(

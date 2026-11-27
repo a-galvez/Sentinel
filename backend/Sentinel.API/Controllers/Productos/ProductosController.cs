@@ -28,6 +28,7 @@ public class ProductosController : ProductosApiControllerBase
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CrearProductoRequest> _crearValidator;
     private readonly IValidator<ProductoListadoQuery> _listadoValidator;
+    private readonly IValidator<EditarProductoRequest> _editarValidator;
 
     public ProductosController(
         IProductoRepository productos,
@@ -40,7 +41,8 @@ public class ProductosController : ProductosApiControllerBase
         IClock clock,
         IUnitOfWork unitOfWork,
         IValidator<CrearProductoRequest> crearValidator,
-        IValidator<ProductoListadoQuery> listadoValidator)
+        IValidator<ProductoListadoQuery> listadoValidator,
+        IValidator<EditarProductoRequest> editarValidator)
     {
         _productos = productos;
         _registros = registros;
@@ -53,6 +55,7 @@ public class ProductosController : ProductosApiControllerBase
         _unitOfWork = unitOfWork;
         _crearValidator = crearValidator;
         _listadoValidator = listadoValidator;
+        _editarValidator = editarValidator;
     }
 
     [HttpGet]
@@ -218,5 +221,81 @@ public class ProductosController : ProductosApiControllerBase
         };
 
         return Created($"/api/v1/productos/{producto.ProductoId}", response);
+    }
+
+    [HttpPatch("{productoId:guid}")]
+    public async Task<IActionResult> Editar(
+        Guid productoId,
+        [FromBody] EditarProductoRequest request,
+        CancellationToken ct)
+    {
+        var validacion = await _editarValidator.ValidateAsync(request, ct);
+        if (!validacion.IsValid)
+            return ValidacionInvalida(validacion);
+
+        if (request.Nombre is null && request.CategoriaProductoId is null)
+        {
+            return Problema(
+                400,
+                "Datos inválidos",
+                "Debe enviar al menos un campo para editar.");
+        }
+
+        var producto = await _productos.ObtenerAsync(productoId, ct);
+        if (producto is null)
+            return Problema(404, "No encontrado", "Producto no encontrado.");
+
+        if (request.CategoriaProductoId is not null
+            && request.CategoriaProductoId.Value != producto.CategoriaProductoId)
+        {
+            return Problema(
+                400,
+                "Datos inválidos",
+                "La categoría de un producto no se puede cambiar.",
+                new Dictionary<string, string[]>
+                {
+                    ["categoriaProductoId"] = new[]
+                    {
+                        "La categoría de un producto no se puede cambiar."
+                    }
+                });
+        }
+
+        if (request.Nombre is not null)
+            producto.Nombre = request.Nombre.Trim();
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        var registro = await _registros.ObtenerPorProductoAsync(productoId, ct);
+
+        var tieneChecklist = registro is not null
+            && await _checklists.ExisteParaProductoAsync(productoId, ct);
+
+        var dto = await ProductoMapper.ProductoAsync(
+            producto,
+            registro,
+            tieneChecklist,
+            _catalogos,
+            _documentos,
+            _clock,
+            ct);
+
+        return Ok(dto);
+    }
+
+    [HttpDelete("{productoId:guid}")]
+    public async Task<IActionResult> DarDeBaja(
+        Guid productoId,
+        CancellationToken ct)
+    {
+        var producto = await _productos.ObtenerAsync(productoId, ct);
+        if (producto is null)
+            return Problema(404, "No encontrado", "Producto no encontrado.");
+
+        producto.DadoDeBaja = true;
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return NoContent();
     }
 }

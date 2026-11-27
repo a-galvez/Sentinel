@@ -36,6 +36,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
 
         // Índices únicos del contrato (H1/H2/H3).
         mb.Entity<Usuario>().HasIndex(u => u.Correo).IsUnique();
+        mb.Entity<TipoDocumento>().HasIndex(t => t.Codigo).IsUnique();
         mb.Entity<RefreshToken>().HasIndex(r => r.TokenHash);
 
         mb.Entity<RegistroSanitario>()
