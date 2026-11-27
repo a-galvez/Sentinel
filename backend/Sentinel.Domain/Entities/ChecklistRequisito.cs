@@ -16,4 +16,5 @@ public class ChecklistRequisito : ITenantEntity
     public EstadoRequisito Estado { get; set; } = EstadoRequisito.Pendiente;
     public DateOnly? FechaLimite { get; set; }
     public DateTime? FechaCumplimiento { get; set; } // UTC
+    public int Orden { get; set; }
 }

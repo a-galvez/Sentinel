@@ -17,6 +17,16 @@ public static class EstadoVencimientoCalculator
         return EstadoVencimiento.Vigente;
     }
 
+    //NoVerificado y EnTramite son estados previos a la emisión. Una vez emitido se recalcula desde la fecha vencimiento.
+    public static EstadoVencimiento CalcularRegistro(
+        EstadoVencimiento estado, DateOnly? fechaVencimiento, DateOnly hoy)
+    {
+        if (estado is EstadoVencimiento.NoVerificado or EstadoVencimiento.EnTramite)
+            return estado;
+
+        return fechaVencimiento is null ? estado : Calcular(fechaVencimiento.Value, hoy);
+    }
+
     public static EstadoVencimiento Resolver(EstadoVencimiento almacenado, DateOnly? vencimiento, DateOnly hoy)
     => vencimiento is { } fecha ? Calcular(fecha, hoy) : almacenado;
 

@@ -6,7 +6,9 @@ using Sentinel.Application.Abstractions;
 using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Infrastructure.Persistence;
 using Sentinel.Infrastructure.Repositories;
+using Sentinel.Infrastructure.Seeding;
 using Sentinel.Infrastructure.Services;
+
 
 namespace Sentinel.Infrastructure;
 
@@ -19,15 +21,16 @@ public static class DependencyInjection
 
         s.AddHttpContextAccessor();
         s.AddDbContext<AppDbContext>(o => o.UseNpgsql(connectionString));
-        s.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         s.AddScoped<ICurrentTenant, HttpCurrentTenant>();
         s.AddSingleton<IClock, HondurasClock>();
         s.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 
+        // Implementaciones de puertos de Application que pertenecen a Infrastructure.
+        s.AddScoped<ITokenService, JwtTokenService>();
 
-        // Repositorios (patrón repositorio). Conviven con IAppDbContext hasta que los handlers
-        // estén migrados; luego se elimina IAppDbContext.
+        // Repositorios: Application define las interfaces y Infrastructure las implementa.
         s.AddScoped<IUnitOfWork, UnitOfWork>();
+        s.AddScoped<IEmpresaRepository, EmpresaRepository>();
         s.AddScoped<IUsuarioRepository, UsuarioRepository>();
         s.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         s.AddScoped<ICatalogoRepository, CatalogoRepository>();
@@ -35,10 +38,14 @@ public static class DependencyInjection
         s.AddScoped<IChecklistRepository, ChecklistRepository>();
         s.AddScoped<ILicenciaRepository, LicenciaRepository>();
         s.AddScoped<IProductoRepository, ProductoRepository>();
+        s.AddScoped<IRegistroSanitarioRepository, RegistroSanitarioRepository>();
 
-        // Motor vacío hasta M6. RequisitosModule de P5 lo reemplaza (ver RequisitosModule).
-        s.AddScoped<IMotorRequisitos, MotorRequisitosVacio>();
-
+        s.AddScoped<IMotorRequisitos, MotorRequisitos>();
+        s.AddScoped<IEvaluaDependencias, EvaluadorDependencias>();
+      
+        s.AddScoped<CatalogoSeeder>();
+        s.AddHostedService<CatalogoSeederHostedService>();
+      
         return s;
     }
 }

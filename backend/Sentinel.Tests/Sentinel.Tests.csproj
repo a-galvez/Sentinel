@@ -26,4 +26,8 @@
     <ProjectReference Include="..\Sentinel.API\Sentinel.API.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Auth\" />
+  </ItemGroup>
+
 </Project>

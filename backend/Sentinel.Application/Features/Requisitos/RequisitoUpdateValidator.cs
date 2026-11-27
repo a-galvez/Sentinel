@@ -1,6 +1,4 @@
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
-using Sentinel.Application.Abstractions;
 
 namespace Sentinel.Application.Features.Requisitos;
 

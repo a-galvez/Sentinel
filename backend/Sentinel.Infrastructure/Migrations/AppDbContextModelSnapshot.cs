@@ -80,6 +80,9 @@ namespace Sentinel.Infrastructure.Migrations
                     b.Property<Guid?>("LicenciaSanitariaId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("ProductoId")
                         .HasColumnType("uuid");
 
@@ -236,29 +239,11 @@ namespace Sentinel.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateOnly>("FechaEmision")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly>("FechaVencimiento")
-                        .HasColumnType("date");
-
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("NumeroRegistro")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int?>("TipoDocumentoId")
-                        .HasColumnType("integer");
-
                     b.HasKey("ProductoId");
-
-                    b.HasIndex("TipoDocumentoId");
-
-                    b.HasIndex("EmpresaId", "NumeroRegistro")
-                        .IsUnique();
 
                     b.ToTable("Productos");
                 });
@@ -290,6 +275,51 @@ namespace Sentinel.Infrastructure.Migrations
                     b.HasIndex("TokenHash");
 
                     b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("Sentinel.Domain.Entities.RegistroSanitario", b =>
+                {
+                    b.Property<Guid>("RegistroSanitarioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("DadoDeBaja")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Estado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(3);
+
+                    b.Property<DateOnly?>("FechaEmision")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("FechaVencimiento")
+                        .HasColumnType("date");
+
+                    b.Property<string>("NumeroRegistro")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProductoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("TipoDocumentoId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RegistroSanitarioId");
+
+                    b.HasIndex("ProductoId")
+                        .IsUnique();
+
+                    b.HasIndex("TipoDocumentoId");
+
+                    b.HasIndex("EmpresaId", "NumeroRegistro")
+                        .IsUnique();
+
+                    b.ToTable("RegistrosSanitarios");
                 });
 
             modelBuilder.Entity("Sentinel.Domain.Entities.ReglaAplicabilidad", b =>
@@ -375,9 +405,6 @@ namespace Sentinel.Infrastructure.Migrations
                     b.HasKey("TipoDocumentoId");
 
                     b.HasIndex("AmbitoDocumentoId");
-
-                    b.HasIndex("Codigo")
-                        .IsUnique();
 
                     b.ToTable("TiposDocumento");
                 });
@@ -481,12 +508,20 @@ namespace Sentinel.Infrastructure.Migrations
                     b.Navigation("Establecimiento");
                 });
 
-            modelBuilder.Entity("Sentinel.Domain.Entities.Producto", b =>
+            modelBuilder.Entity("Sentinel.Domain.Entities.RegistroSanitario", b =>
                 {
+                    b.HasOne("Sentinel.Domain.Entities.Producto", "Producto")
+                        .WithOne()
+                        .HasForeignKey("Sentinel.Domain.Entities.RegistroSanitario", "ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Sentinel.Domain.Entities.TipoDocumento", null)
                         .WithMany()
                         .HasForeignKey("TipoDocumentoId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Producto");
                 });
 
             modelBuilder.Entity("Sentinel.Domain.Entities.Requisito", b =>

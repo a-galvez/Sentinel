@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
-using Sentinel.Application.Abstractions;
 using Sentinel.Domain.Constantes;
 using Sentinel.Domain.Entities;
 using Sentinel.Infrastructure.Persistence;
@@ -13,7 +12,7 @@ namespace Sentinel.Infrastructure.Seeding;
 // Contenido: el ejemplo del PDF (Docs/sentinel-explicacion-y-ejemplo) — LIC-FARM, LIC-DROG y
 // REG-MED con las reglas R1..R3 y la dependencia REG-MED → LIC-DROG. Es contenido ILUSTRATIVO:
 // los requisitos legales reales deben verificarse contra la normativa de ARSA (H11 DoD).
-public sealed class CatalogoSeeder(IAppDbContext db)
+public sealed class CatalogoSeeder(AppDbContext db)
 {
 
     public async Task SembrarAsync(CancellationToken ct)

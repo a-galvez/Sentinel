@@ -1,50 +1,56 @@
 using FluentValidation;
+using Sentinel.API.Common;
 using Sentinel.Application.Common.Exceptions;
 
 namespace Sentinel.API.Middleware;
 
+// Traduce excepciones de Application a respuestas HTTP en formato RFC 7807.
 public sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> log)
 {
     public async Task InvokeAsync(HttpContext ctx)
     {
-        try { await next(ctx); }
+        try
+        {
+            await next(ctx);
+        }
         catch (ValidationException ex)
         {
-            var errors = ex.Errors.Select(e => new
-            {
-                field = ToCamelCase(e.PropertyName),
-                message = e.ErrorMessage
-            });
-            await Responder(ctx, 400, new { error = "VALIDATION_ERROR", message = "Hay campos inválidos.", errors });
+            var errors = ex.Errors
+                .GroupBy(e => ToCamelCase(e.PropertyName))
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+            await ProblemDetailsWriter.WriteAsync(
+                ctx, 400, "Datos inválidos", "Uno o más campos no son válidos.", errors);
         }
         catch (AppException ex)
         {
-            var status = ex switch
-            {
-                NotFoundException => 404,
-                ConflictException => 409,
-                UnauthorizedAppException => 401,
-                _ => 400
-            };
-            await Responder(ctx, status, new { error = ex.Code, message = ex.Message });
+            var (status, title) = Clasificar(ex);
+            await ProblemDetailsWriter.WriteAsync(ctx, status, title, ex.Message, ex.Errors);
         }
         catch (Exception ex)
         {
             log.LogError(ex, "Error no controlado");
-            await Responder(ctx, 500, new { error = "INTERNAL_ERROR", message = "Ocurrió un error inesperado." });
+            await ProblemDetailsWriter.WriteAsync(ctx, 500, "Error interno", "Ocurrió un error inesperado.");
         }
     }
+
+    private static (int Status, string Title) Clasificar(AppException ex) => ex switch
+    {
+        NotFoundException => (404, "No encontrado"),
+        ConflictException => (409, "Conflicto"),
+        UnauthorizedAppException u => (401, u.Code switch
+        {
+            "INVALID_CREDENTIALS" => "Credenciales incorrectas",
+            "INVALID_REFRESH_TOKEN" => "Sesión vencida",
+            _ => "No autenticado"
+        }),
+        BadRequestException => (400, "Solicitud incorrecta"),
+        _ => (400, "Solicitud incorrecta")
+    };
 
     private static string ToCamelCase(string? nombre)
     {
         if (string.IsNullOrEmpty(nombre)) return string.Empty;
         return char.ToLowerInvariant(nombre[0]) + nombre[1..];
-    }
-
-    private static Task Responder(HttpContext ctx, int status, object body)
-    {
-        if (ctx.Response.HasStarted) return Task.CompletedTask;
-        ctx.Response.StatusCode = status;
-        return ctx.Response.WriteAsJsonAsync(body);
     }
 }

@@ -22,4 +22,8 @@
     <ProjectReference Include="..\Sentinel.Infrastructure\Sentinel.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controllers\Auth\" />
+  </ItemGroup>
+
 </Project>

@@ -5,14 +5,15 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Sentinel.Application.Abstractions;
+using Sentinel.Application.Abstractions.Repositories;
 using Sentinel.Domain.Entities;
 
 namespace Sentinel.Infrastructure.Services;
 
-// Emite el JWT (access token) y gestiona los refresh tokens: los guarda con hash SHA256
-// (determinístico, para buscarlos en POST /auth/refresh) y devuelve el valor en claro.
+// Emite el JWT (access token) y prepara el refresh token para que el caso de uso lo persista.
+// No llama SaveChanges: el caso de uso decide cuándo confirmar (login, refresh o registro atómico).
 public sealed class JwtTokenService(
-    IAppDbContext db,
+    IRefreshTokenRepository refreshTokens,
     IClock clock,
     IConfiguration cfg) : ITokenService
 {
@@ -28,27 +29,30 @@ public sealed class JwtTokenService(
 
     public string HashRefreshToken(string refreshToken) => HashSha256(refreshToken);
 
-    private async Task<AuthTokens> EmitirConAsync(Usuario usuario, Guid? reemplazaPorId, CancellationToken ct)
+    private Task<AuthTokens> EmitirConAsync(Usuario usuario, Guid? reemplazaPorId, CancellationToken ct)
     {
-        var accessToken = GenerarAccessToken(usuario);
+        ct.ThrowIfCancellationRequested();
 
+        var ahora = clock.UtcAhora;
+        var expiraEn = ahora.Add(AccesoDuracion);
+
+        var accessToken = GenerarAccessToken(usuario, ahora, expiraEn);
         var refreshToken = GenerarRefreshToken();
-        var token = new RefreshToken
+
+        // Solo se deja en el ChangeTracker; el caso de uso confirma con IUnitOfWork.
+        refreshTokens.Agregar(new RefreshToken
         {
             RefreshTokenId = Guid.NewGuid(),
             UsuarioId = usuario.UsuarioId,
             TokenHash = HashSha256(refreshToken),
-            Expira = clock.UtcAhora.Add(RefreshDuracion),
+            Expira = ahora.Add(RefreshDuracion),
             ReemplazadoPorId = reemplazaPorId
-        };
+        });
 
-        db.RefreshTokens.Add(token);
-        await db.SaveChangesAsync(ct);
-
-        return new AuthTokens(accessToken, refreshToken);
+        return Task.FromResult(new AuthTokens(accessToken, refreshToken, expiraEn));
     }
 
-    private string GenerarAccessToken(Usuario usuario)
+    private string GenerarAccessToken(Usuario usuario, DateTime ahora, DateTime expira)
     {
         var secret = cfg["Jwt:Secret"] ?? cfg["JWT__Secret"]
                      ?? throw new InvalidOperationException("Falta la variable JWT__Secret.");
@@ -69,8 +73,8 @@ public sealed class JwtTokenService(
             issuer: issuer,
             audience: audience,
             claims: claims,
-            notBefore: clock.UtcAhora,
-            expires: clock.UtcAhora.Add(AccesoDuracion),
+            notBefore: ahora,
+            expires: expira,
             signingCredentials: signing);
 
         return new JwtSecurityTokenHandler().WriteToken(jwt);
