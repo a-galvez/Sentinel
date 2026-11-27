@@ -174,7 +174,6 @@ public class ProductosController : ProductosApiControllerBase
             ProductoId = Guid.NewGuid(),
             EmpresaId = empresaId,
             CategoriaProductoId = request.CategoriaProductoId,
-            TipoDocumentoId = tipoDocumentoId,
             Nombre = request.Nombre.Trim(),
             Fabricante = empresa?.Nombre ?? string.Empty,
             DadoDeBaja = false
