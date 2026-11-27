@@ -36,6 +36,7 @@ public static class DependencyInjection
         s.AddScoped<IChecklistRepository, ChecklistRepository>();
         s.AddScoped<ILicenciaRepository, LicenciaRepository>();
         s.AddScoped<IProductoRepository, ProductoRepository>();
+        s.AddScoped<IRegistroSanitarioRepository, RegistroSanitarioRepository>();
 
         s.AddScoped<IMotorRequisitos, MotorRequisitos>();
         s.AddScoped<IEvaluaDependencias, EvaluadorDependencias>();

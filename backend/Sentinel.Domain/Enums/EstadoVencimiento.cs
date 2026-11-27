@@ -1,3 +1,10 @@
 namespace Sentinel.Domain.Enums;
 
-public enum EstadoVencimiento { NoVerificado, EnTramite,  Vigente, PorVencer, Vencido }
+public enum EstadoVencimiento
+{
+    Vigente,
+    PorVencer,
+    Vencido,
+    NoVerificado,
+    EnTramite
+}
