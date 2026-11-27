@@ -19,9 +19,11 @@ public class CrearEstablecimiento(
     IUnitOfWork unitOfWork,
     IClock clock)
 {
-    public async Task<EstablecimientoDto> ManejarAsync(CrearEstablecimientoRequest request, CancellationToken ct)
+    public async Task<EstablecimientoCreadoDto> ManejarAsync(CrearEstablecimientoRequest request, CancellationToken ct)
     {
         // El tipo debe existir en el catálogo (catálogo global: sin filtro de empresa).
+        // Dependencia P2: GET /catalogos/tipos-establecimiento aún no existe y el frontend
+        // lo necesita para poblar la lista. Ver Docs/sentinel-p4-pendientes.md.
         var tipo = (await catalogos.TiposEstablecimientoAsync(ct))
             .FirstOrDefault(t => t.TipoEstablecimientoId == request.TipoEstablecimientoId)
             ?? throw new ValidationException(new[]
@@ -69,6 +71,13 @@ public class CrearEstablecimiento(
         }
 
         await unitOfWork.SaveChangesAsync(ct);   // un solo guardado: establecimiento + licencia
-        return dto;
+
+        return new EstablecimientoCreadoDto
+        {
+            Establecimiento = dto,
+            Mensaje = tipoDocumentoId is null
+                ? "No existe una regla que aplique a este establecimiento. Se guardó sin licencia sanitaria ni checklist."
+                : null
+        };
     }
 }

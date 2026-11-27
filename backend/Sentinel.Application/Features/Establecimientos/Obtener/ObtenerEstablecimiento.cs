@@ -45,6 +45,8 @@ public sealed class ObtenerEstablecimiento(
         if (tipoDocumento is null)
             return dto;
 
+        // TODO(H11): mantener este flag alineado con el GET de checklist cuando exista.
+        // Ver Docs/sentinel-p4-pendientes.md.
         var tieneChecklist = await checklists.ExisteParaLicenciaAsync(licencia.LicenciaSanitariaId, ct);
 
         dto.Licencia = licencia.ToDto(tipoDocumento, tieneChecklist, clock.HoyHonduras);

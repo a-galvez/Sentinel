@@ -16,6 +16,12 @@ public sealed class DarDeBajaEstablecimiento(
 
         establecimiento.DadoDeBaja = true;
 
+        // TODO(H11): el checklist de la licencia no se marca como dado de baja porque
+        // ChecklistRequisito no implementa ISoftDelete. Hoy queda inaccesible porque la
+        // licencia y el establecimiento sí se filtran por DadoDeBaja; cuando exista el
+        // endpoint/consulta de checklist, filtrar por el padre o agregar soft-delete.
+        // Ver Docs/sentinel-p4-pendientes.md.
+
         // La licencia se da de baja junto con el establecimiento. Si no tiene (ninguna regla aplicó)
         // o ya estaba dada de baja, no hay nada más que hacer.
         var licencia = await licencias.ObtenerPorEstablecimientoParaModificarAsync(establecimientoId, ct);

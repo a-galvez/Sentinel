@@ -33,6 +33,8 @@ public sealed class ListarEstablecimientos(
         var tiposDocumento = (await documentos.ObtenerTiposDocumentoAsync(
                 licenciasDePagina.Select(l => l.TipoDocumentoId!.Value).Distinct().ToList(), ct))
             .ToDictionary(t => t.TipoDocumentoId);
+        // TODO(H11): mantener este flag alineado con el GET de checklist cuando exista
+        // (incluido soft-delete del checklist, si P5 lo agrega). Ver Docs/sentinel-p4-pendientes.md.
         var licenciasConChecklist = await checklists.LicenciaIdsConChecklistAsync(
             licenciasDePagina.Select(l => l.LicenciaSanitariaId).ToList(), ct);
 
