@@ -28,6 +28,7 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
     private readonly IClock _clock;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<VerificarRegistroRequest> _verificarValidator;
+    private readonly IValidator<EmisionRequest> _emisionValidator;
 
     public RegistrosSanitariosController(
         IProductoRepository productos,
@@ -37,7 +38,8 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
         ICurrentTenant tenant,
         IClock clock,
         IUnitOfWork unitOfWork,
-        IValidator<VerificarRegistroRequest> verificarValidator)
+        IValidator<VerificarRegistroRequest> verificarValidator,
+        IValidator<EmisionRequest> emisionValidator)
     {
         _productos = productos;
         _registros = registros;
@@ -47,6 +49,7 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
         _clock = clock;
         _unitOfWork = unitOfWork;
         _verificarValidator = verificarValidator;
+        _emisionValidator = emisionValidator;
     }
 
     [HttpPost("verificacion")]
@@ -175,6 +178,106 @@ public class RegistrosSanitariosController : ProductosApiControllerBase
                 });
             }
         }
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        var tieneChecklist = await _checklists.ExisteParaProductoAsync(productoId, ct);
+
+        var registroDto = await ProductoMapper.RegistroAsync(
+            registro,
+            tieneChecklist,
+            _documentos,
+            _clock,
+            ct);
+
+        return Ok(registroDto);
+    }
+
+    [HttpPatch]
+    public async Task<IActionResult> RegistrarEmision(
+        Guid productoId,
+        [FromBody] EmisionRequest request,
+        CancellationToken ct)
+    {
+        var validacion = await _emisionValidator.ValidateAsync(request, ct);
+        if (!validacion.IsValid)
+            return ValidacionInvalida(validacion);
+
+        if (request.FechaEmision is null)
+        {
+            return Problema(
+                400,
+                "Datos inválidos",
+                "La fecha de emisión es obligatoria.");
+        }
+
+        var producto = await _productos.ObtenerAsync(productoId, ct);
+
+        if (producto is null)
+            return Problema(404, "No encontrado", "Producto no encontrado.");
+
+        var registro = await _registros.ObtenerPorProductoAsync(productoId, ct);
+        if (registro is null)
+        {
+            return Problema(
+                404,
+                "No encontrado",
+                "El producto no existe o no tiene registro sanitario.");
+        }
+
+        if (registro.TipoDocumentoId is null)
+        {
+            return Problema(
+                400,
+                "Datos inválidos",
+                "El registro no tiene documento asignado.");
+        }
+
+        var tipoDocumento = await _documentos.ObtenerTipoDocumentoAsync(
+            registro.TipoDocumentoId.Value, ct);
+
+        if (tipoDocumento is null)
+        {
+            return Problema(
+                400,
+                "Datos inválidos",
+                "El documento asignado al registro no existe.");
+        }
+
+        var numero = request.Numero.Trim();
+
+        var duplicado = await _registros.ExisteNumeroAsync(
+            _tenant.EmpresaId,
+            numero,
+            registro.RegistroSanitarioId,
+            ct);
+
+        if (duplicado)
+        {
+            return Problema(
+                409,
+                "Conflicto",
+                "El número de registro ya existe en tu empresa.",
+                new Dictionary<string, string[]>
+                {
+                    ["numero"] = new[]
+                    {
+                        "El número de registro ya existe en tu empresa."
+                    }
+                });
+        }
+
+        var fechaEmision = request.FechaEmision.Value;
+
+        var fechaVencimiento = fechaEmision.AddMonths(
+            tipoDocumento.VigenciaMeses);
+
+        registro.NumeroRegistro = numero;
+        registro.FechaEmision = fechaEmision;
+        registro.FechaVencimiento = fechaVencimiento;
+        registro.Estado = EstadoVencimientoCalculator.Calcular(
+            fechaVencimiento,
+            _clock.HoyHonduras);
 
         await _unitOfWork.SaveChangesAsync(ct);
 
