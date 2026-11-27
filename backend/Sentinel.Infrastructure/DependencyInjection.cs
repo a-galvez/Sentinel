@@ -36,6 +36,7 @@ public static class DependencyInjection
         s.AddScoped<IChecklistRepository, ChecklistRepository>();
         s.AddScoped<ILicenciaRepository, LicenciaRepository>();
         s.AddScoped<IProductoRepository, ProductoRepository>();
+        s.AddScoped<IRegistroSanitarioRepository, RegistroSanitarioRepository>();
 
         // Implementación vacía. P5 debe registrar la real cuando restaure su feature.
         s.AddScoped<IMotorRequisitos, MotorRequisitosVacio>();

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Sentinel.Application.Abstractions;
 using Sentinel.Domain.Entities;
+using Sentinel.Domain.Enums;
 
 namespace Sentinel.Infrastructure.Persistence;
 
@@ -14,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<CategoriaProducto> CategoriasProducto => Set<CategoriaProducto>();
     public DbSet<Producto> Productos => Set<Producto>();
+    public DbSet<RegistroSanitario> RegistrosSanitarios => Set<RegistroSanitario>();
     public DbSet<TipoEstablecimiento> TiposEstablecimiento => Set<TipoEstablecimiento>();
     public DbSet<Establecimiento> Establecimientos => Set<Establecimiento>();
     public DbSet<LicenciaSanitaria> Licencias => Set<LicenciaSanitaria>();
@@ -34,9 +36,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
 
         // Índices únicos del contrato (H1/H2/H3).
         mb.Entity<Usuario>().HasIndex(u => u.Correo).IsUnique();
-        mb.Entity<Producto>().HasIndex(p => new { p.EmpresaId, p.NumeroRegistro }).IsUnique();
-        mb.Entity<TipoDocumento>().HasIndex(t => t.Codigo).IsUnique();
         mb.Entity<RefreshToken>().HasIndex(r => r.TokenHash);
+
+        mb.Entity<RegistroSanitario>()
+            .HasIndex(r => new { r.EmpresaId, r.NumeroRegistro })
+            .IsUnique();
 
         // Claves compuestas de los catálogos que no tienen id propio.
         mb.Entity<DocumentoRequisito>()
@@ -63,6 +67,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
             .HasForeignKey(l => l.TipoDocumentoId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        mb.Entity<RegistroSanitario>()
+            .HasOne(r => r.Producto)
+            .WithOne()
+            .HasForeignKey<RegistroSanitario>(r => r.ProductoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        mb.Entity<RegistroSanitario>()
+            .HasOne<TipoDocumento>()
+            .WithMany()
+            .HasForeignKey(r => r.TipoDocumentoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        mb.Entity<RegistroSanitario>()
+            .Property(r => r.Estado)
+            .HasDefaultValue(EstadoVencimiento.NoVerificado);
 
         mb.Entity<TipoDocumento>()
             .HasOne(t => t.AmbitoDocumento)
